@@ -1,0 +1,370 @@
+# Startup School Curriculum — Resource Mapping
+# Source: https://www.startupschool.org/curriculum
+# 8 modules · 25 resources
+#
+# Each resource entry:
+#   title          — canonical name from startupschool.org
+#   type           — video | article | essay
+#   duration       — "N mins" for videos, null for articles/essays
+#   author         — presenter / writer
+#   description    — curriculum page description
+#   conditions     — optional "Watch/Read this if" bullets
+#   curriculum_url — https://www.startupschool.org/curriculum/<slug>
+#   online_url     — YC Library page or paulgraham.com URL
+#   video_url      — YouTube URL (videos only, null for articles/essays)
+
+modules:
+
+  - title: "Module 1: Deciding to Start a Startup"
+    resources:
+
+      - title: "Should You Start A Startup?"
+        type: video
+        duration: "17 mins"
+        author: "Harj Taggar"
+        description: >
+          Long-time YC Group Partner Harj Taggar will give a talk on how to decide
+          whether you should start a startup.
+        curriculum_url: https://www.startupschool.org/curriculum/should-you-start-a-startup
+        online_url: https://ycombinator.com/library/GV-should-you-start-a-startup
+        video_url: https://www.youtube.com/watch?v=BUE-icVYRFU
+
+      - title: "Why You Should Leave Your FAANG Job"
+        type: video
+        duration: "19 mins"
+        author: "Dalton Caldwell, Michael Seibel"
+        description: >
+          Dalton Caldwell and Michael Seibel discuss the struggles of working at FAANG
+          (Facebook, Apple, Amazon, Netflix, Google) and how to strategize leaving a big
+          tech job to become a founder at a startup.
+        curriculum_url: https://www.startupschool.org/curriculum/why-you-should-leave-your-faang-job
+        online_url: https://ycombinator.com/library/Ih-dalton-michael-why-you-should-leave-your-faang-job
+        video_url: https://www.youtube.com/watch?v=sM2reZib2RY
+
+      - title: "Why to Not Not Start a Startup"
+        type: essay
+        duration: null
+        author: "Paul Graham"
+        description: >
+          YC founder Paul Graham discusses 16 common reasons why potential founders choose
+          not to start a startup. For each reason, he attempts an evenhanded analysis of
+          its merits, separating the real blockers from the imaginary ones. This essay was
+          first written in 2007 but is still relevant today.
+        curriculum_url: https://www.startupschool.org/curriculum/why-not-to-start-a-startup
+        online_url: https://paulgraham.com/notnot.html
+        video_url: null
+
+      - title: "Before the Startup"
+        type: article
+        duration: null
+        author: "Paul Graham"
+        description: >
+          Paul Graham discusses the things you should do before founding a company to
+          ensure you're prepared. He also dispels some myths and misconceptions potential
+          founders have about the sort of preparation that isn't actually necessary.
+        curriculum_url: https://www.startupschool.org/curriculum/before-the-startup
+        online_url: https://ycombinator.com/library/8y-before-the-startup
+        video_url: null
+
+  - title: "Module 2: Getting and Evaluating Startup Ideas"
+    resources:
+
+      - title: "How to Get and Evaluate Startup Ideas"
+        type: video
+        duration: "32 mins"
+        author: "Jared Friedman"
+        description: >
+          YC Group Partner Jared Friedman will give a talk on how to get and evaluate
+          startup ideas. He'll share many examples of YC companies and the inside story
+          of how they came up with the ideas that turned into billion dollar companies.
+          Even if you have an existing idea, this talk is worth going to because it will
+          help you confirm that your current idea really is good.
+        curriculum_url: https://www.startupschool.org/curriculum/how-to-get-and-evaluate-startup-ideas
+        online_url: https://www.startupschool.org/curriculum/how-to-get-and-evaluate-startup-ideas
+        video_url: https://www.youtube.com/watch?v=Th8JoIan4dg
+
+      - title: "How to Get Startup Ideas (Paul Graham)"
+        type: essay
+        duration: null
+        author: "Paul Graham"
+        description: >
+          The way to get startup ideas is not to try to think of startup ideas.
+          It's to look for problems, preferably problems you have yourself.
+        conditions:
+          - "you aren't sure if your startup idea is good, or if you don't have an idea yet"
+        curriculum_url: https://www.startupschool.org/curriculum/how-to-get-startup-ideas
+        online_url: https://paulgraham.com/startupideas.html
+        video_url: null
+
+      - title: "All About Pivoting"
+        type: video
+        duration: "27 mins"
+        author: "Dalton Caldwell"
+        description: >
+          YC Partner and Head of Admissions Dalton Caldwell gives us the rundown on
+          pivoting and shares his advice on how founders should think about it for their
+          startups.
+        conditions:
+          - "you're wondering if you should pivot"
+          - "you aren't sure if your new idea is better than your last idea"
+        curriculum_url: https://www.startupschool.org/curriculum/all-about-pivoting
+        online_url: https://ycombinator.com/library/6p-all-about-pivoting
+        video_url: https://www.youtube.com/watch?v=8pNxKX1SUGE
+
+      - title: "Where Do Great Startup Ideas Come From?"
+        type: video
+        duration: "20 mins"
+        author: "Dalton Caldwell, Michael Seibel"
+        description: >
+          Dalton Caldwell and Michael Seibel talk about where the ideas for Airbnb,
+          Coinbase, and Stripe came from. Then they discuss what you can learn from
+          these founders.
+        curriculum_url: https://www.startupschool.org/curriculum/where-do-great-startup-ideas-come-from
+        online_url: https://ycombinator.com/library/DU-dalton-michael-where-do-great-startup-ideas-come-from
+        video_url: https://www.youtube.com/watch?v=Jcuqq48CNj8
+
+  - title: "Module 3: Building Your Founding Team"
+    resources:
+
+      - title: "All About Co-Founders"
+        type: video
+        duration: "32 mins"
+        author: "Catheryn Li, Divya Bhat"
+        description: >
+          Catheryn Li built the YC co-founder matching platform. She will talk about
+          the importance of having a co-founder and how to get and vet one. Then YC
+          Visiting Partner Divya Bhat will talk about how to build a successful working
+          relationship with your co-founder.
+        curriculum_url: https://www.startupschool.org/curriculum/all-about-co-founders
+        online_url: https://www.startupschool.org/curriculum/all-about-co-founders
+        video_url: https://www.youtube.com/watch?v=A4SLDQDXdp0
+
+      - title: "Co-Founder Mistakes That Kill Companies & How To Avoid Them"
+        type: video
+        duration: "8 mins"
+        author: "Dalton Caldwell, Michael Seibel"
+        description: >
+          YC Group partners Dalton Caldwell and Michael Seibel discuss the top mistakes
+          that they've seen founding teams make that end up killing their companies. They
+          share advice for how to avoid these mistakes and general tips for finding a
+          co-founder and setting up your founding team for success.
+        curriculum_url: https://www.startupschool.org/curriculum/co-founder-mistakes-that-kill-companies
+        online_url: https://ycombinator.com/library/DZ-dalton-michael-co-founder-mistakes-that-kill-companies-and-how-to-avoid-them
+        video_url: https://www.youtube.com/watch?v=dlfjs_eEEzs
+
+      - title: "How to Split Equity Among Co-Founders"
+        type: video
+        duration: "4 mins"
+        author: "Michael Seibel"
+        description: >
+          YC Group Partner Michael Seibel shares why he advises that startups equally
+          split equity among co-founders.
+        conditions:
+          - "you have a cofounder (or want one) and want to know how to split your equity"
+        curriculum_url: https://www.startupschool.org/curriculum/how-to-split-equity-among-co-founders
+        online_url: https://ycombinator.com/library/5x-how-to-split-equity-among-co-founders
+        video_url: https://www.youtube.com/watch?v=9NhEBVPlJs4
+
+      - title: "How to Work Together"
+        type: video
+        duration: "27 mins"
+        author: "Kevin Hale"
+        description: >
+          YC Partner Kevin Hale talks about the importance of building a successful
+          working relationship with your cofounders, and setting up processes to optimize
+          for the strengths of your team.
+        conditions:
+          - "you and your cofounders argue a lot"
+          - "your cofounders aren't doing their fair share of work"
+          - "you want to have more effective conversations with your cofounder"
+        curriculum_url: https://www.startupschool.org/curriculum/how-to-work-together
+        online_url: https://www.startupschool.org/curriculum/how-to-work-together
+        video_url: https://www.youtube.com/watch?v=30a5yFBd7Fo
+
+  - title: "Module 4: Planning an MVP"
+    resources:
+
+      - title: "How to Talk to Users"
+        type: video
+        duration: "17 mins"
+        author: "Gustaf Alströmer"
+        description: >
+          YC often says "talk to your users", but actually doing that is surprisingly
+          tricky. YC Group Partner Gustaf Alstromer will give you the non-obvious advice
+          on how to talk to your users and potential users, how to run a great user
+          interview, and how to interpret what you hear.
+        curriculum_url: https://www.startupschool.org/curriculum/how-to-talk-to-users
+        online_url: https://ycombinator.com/library/Iq-how-to-talk-to-users
+        video_url: https://www.youtube.com/watch?v=z1iF1c8w5Lg
+
+      - title: "How to Build an MVP"
+        type: video
+        duration: "17 mins"
+        author: "Michael Seibel"
+        description: >
+          YC CEO and Partner Michael Seibel shares his approach to building an MVP and
+          getting your first users as a pre-launch startup.
+        conditions:
+          - "you haven't built an MVP yet"
+          - "you're trying to figure out which features to put in your MVP"
+          - "you're building an MVP but don't have anyone using it yet"
+          - "your MVP is taking longer than expected to launch"
+        curriculum_url: https://www.startupschool.org/curriculum/how-to-plan-an-mvp
+        online_url: https://ycombinator.com/library/6f-how-to-plan-an-mvp
+        video_url: https://www.youtube.com/watch?v=1hHMwLxN6EM
+
+      - title: "Product Development Cycle Fundamentals"
+        type: article
+        duration: null
+        author: "Michael Seibel"
+        description: >
+          Drawing from mistakes at Justin.tv (before it grew into Twitch and Socialcam),
+          YC Group Partner Michael Seibel shares advice for product development cycle
+          fundamentals for early stage startup teams.
+        conditions:
+          - "you want to learn the best product development process but don't want to watch Michael's talk"
+        curriculum_url: https://www.startupschool.org/curriculum/product-development-cycle-fundamentals
+        online_url: https://ycombinator.com/library/4e-guide-to-product-development
+        video_url: null
+
+  - title: "Module 5: Launching"
+    resources:
+
+      - title: "How to Launch (Again and Again)"
+        type: video
+        duration: "21 mins"
+        author: "Kat Manalac"
+        description: >
+          YC Partner and Head of Outreach Kat Manalac will give a talk on how to launch
+          products and get attention for them. What she says is likely to change how you
+          think about launching.
+        curriculum_url: https://www.startupschool.org/curriculum/how-to-launch-again-and-again
+        online_url: https://ycombinator.com/library/6i-how-to-launch-again-and-again
+        video_url: https://www.youtube.com/watch?v=3xU050kMbHM
+
+      - title: "How to Get your First Customers"
+        type: video
+        duration: "23 mins"
+        author: "Gustaf Alströmer"
+        description: >
+          Gustaf Alstromer, YC Partner & Former Head of Growth at Airbnb, will give
+          tactical advice on probably the most common question founders have: how do I
+          get my first customers? Gustaf will cover this topic for all kinds of companies
+          — whether you're B2B or B2C.
+        curriculum_url: https://www.startupschool.org/curriculum/how-to-get-your-first-customers
+        online_url: https://ycombinator.com/library/Ip-how-to-get-your-first-customers
+        video_url: https://www.youtube.com/watch?v=hyYCn_kAngI
+
+      - title: "Do Things That Don't Scale"
+        type: essay
+        duration: null
+        author: "Paul Graham"
+        description: >
+          Paul Graham's essay expands on one of the most common pieces of advice given
+          to YC founders to do things that don't scale.
+        conditions:
+          - "you want to know how to find your first customer and make them love your product"
+        curriculum_url: https://www.startupschool.org/curriculum/do-things-that-dont-scale
+        online_url: https://paulgraham.com/ds.html
+        video_url: null
+
+  - title: "Module 6: Growing and Monetizing"
+    resources:
+
+      - title: "How to set KPIs and Prioritize Your Time"
+        type: video
+        duration: "27 mins"
+        author: "Divya Bhat"
+        description: >
+          Visiting Partner Divya Bhat will give a talk about how to set your KPIs (key
+          metrics), and how to prioritize your time. These talks will help you launch
+          faster (if you're not launched already), set your goals for the end of the
+          course, and make more real progress.
+        curriculum_url: https://www.startupschool.org/curriculum/how-to-set-kpis-and-prioritize-your-time
+        online_url: https://ycombinator.com/library/Iu-setting-kpis-and-goals
+        video_url: https://www.youtube.com/watch?v=6DTK9yDP6p0
+
+      - title: "Startup Business Models and Pricing"
+        type: video
+        duration: "33 mins"
+        author: "Aaron Epstein"
+        description: >
+          YC Group Partner Aaron Epstein will talk about different startup business
+          models, how to monetize, and how to price your product. Pricing and
+          monetization is one of the most common questions we get from founders.
+        curriculum_url: https://www.startupschool.org/curriculum/startup-business-models-and-pricing
+        online_url: https://ycombinator.com/library/Gh-yc-guide-to-business-models
+        video_url: https://www.youtube.com/watch?v=oWZbWzAyHAE
+
+      - title: "Growth for Startups"
+        type: video
+        duration: "38 mins"
+        author: "Gustaf Alströmer"
+        description: >
+          YC Partner and growth expert Gustaf Alstromer talks about how to measure
+          product market fit, how to decide on a growth channel, metrics that lie about
+          PMF and other mechanics of growth for startups. 
+          conditions:
+            - "you don't have product market fit yet"
+            - "your retention is bad (or you don't know what 'retention' means)"
+            - "you're trying to find new ways to get new customers"
+            - "you want to create a viral loop in your product"
+            - "you want to learn how to run online ads"
+        curriculum_url: https://www.startupschool.org/curriculum/growth-for-startups
+        online_url: https://ycombinator.com/library/6k-growth-for-startups
+        video_url: https://www.youtube.com/watch?v=6lY9CYIY4pQ
+
+  - title: "Module 7: Fundraising and Company Building"
+    resources:
+
+      - title: "How Startup Fundraising Works in 2022"
+        type: video
+        duration: "28 mins"
+        author: "Brad Flora"
+        description: >
+          Brad Flora has seen startup fundraising from every angle: as a founder, as one
+          of the most prolific angel investors in Silicon Valley, and now as a YC Partner.
+          Brad has coached hundreds of companies on fundraising, and in this talk he'll
+          give you the inside story on how modern startup fundraising works.
+        curriculum_url: https://www.startupschool.org/curriculum/how-startup-fundraising-works-in-2022
+        online_url: https://ycombinator.com/library/Il-how-startup-fundraising-works
+        video_url: https://www.youtube.com/watch?v=zBUhQPPS9AY
+
+      - title: "How to Apply and Succeed at Y Combinator"
+        type: video
+        duration: "25 mins"
+        author: "Dalton Caldwell"
+        description: >
+          YC Group Partner and head of admissions, Dalton Caldwell, will give a talk on
+          how to think about applying to YC. This talk goes way beyond the basic info on
+          our website. Among founders who were accepted to YC in recent batches, an
+          earlier version of this talk is frequently mentioned as instrumental in their
+          decision to apply to YC and to getting in.
+        curriculum_url: https://www.startupschool.org/curriculum/how-to-apply-and-succeed-at-y-combinator
+        online_url: https://ycombinator.com/library/It-how-to-apply-and-succeed-at-yc
+        video_url: https://www.youtube.com/watch?v=B5tU2447OK8
+
+  - title: "Module 8: Stories from Great Founders"
+    resources:
+
+      - title: "The Founding Story of Facebook"
+        type: video
+        duration: "25 mins"
+        author: "Mark Zuckerberg"
+        description: >
+          Mark Zuckerberg shares the early days of Facebook, how he makes decisions,
+          and what excites him about the future.
+        curriculum_url: https://www.startupschool.org/curriculum/the-founding-story-of-facebook
+        online_url: https://www.startupschool.org/curriculum/the-founding-story-of-facebook
+        video_url: https://www.youtube.com/watch?v=Lb4IcGF5iTQ
+
+      - title: "The Founding Story of 23andMe"
+        type: video
+        duration: "28 mins"
+        author: "Anne Wojcicki"
+        description: >
+          Anne Wojcicki, co-founder and CEO of 23andMe, on starting and scaling 23andMe.
+          Interviewed by Sam Altman for YC's "How to Build the Future" series.
+        curriculum_url: https://www.startupschool.org/curriculum/the-founding-story-of-23andme
+        online_url: https://ycombinator.com/library/5I-on-starting-and-scaling-healthcare-startup-23andme
+        video_url: https://www.youtube.com/watch?v=zZN-3RpdjcY

@@ -341,6 +341,15 @@ def format_transcript(text: str, max_length: Optional[int] = None) -> str:
     # Basic cleanup
     text = re.sub(r"\s+", " ", text)  # Normalize whitespace
     text = re.sub(r"[“”]", '"', text)  # Normalize quotes
+    
+    # [Placeholder] Simple speaker detection (heuristic)
+    # Match names like "Garry Tan:" or ">> Speaker:" at the beginning of phrases
+    text = re.sub(r"(>>\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*:)", r"\n\n\1", text)
+    
+    # Handle common case where speaker is just a capitalized name followed by colon
+    # but avoid matching common words at start of sentences
+    # This is a placeholder for real diarization
+    text = re.sub(r"(?<= )([A-Z][a-z]+ [A-Z][a-z]+:)", r"\n\n\1", text)
 
     if max_length:
         text = text[:max_length]
@@ -354,6 +363,7 @@ def get_transcript(url: str, with_timestamps: bool = False) -> Optional[str]:
     1. YouTubeTranscriptApi
     2. yt-dlp captions
     3. YouTube watch page captions metadata
+    4. Invidious API fallback
     """
     video_id = extract_video_id(url)
     if not video_id:
@@ -370,9 +380,15 @@ def get_transcript(url: str, with_timestamps: bool = False) -> Optional[str]:
         transcript = _parse_caption_payload(transcript, with_timestamps=with_timestamps)
         return transcript if with_timestamps else format_transcript(transcript)
 
+    # Fallback to watch page scraping
     transcript = get_transcript_from_youtube_page(video_id, with_timestamps=with_timestamps)
     if transcript:
         return transcript if with_timestamps else format_transcript(transcript)
+
+    # Fallback to Invidious
+    transcript = TranscriptRecoveryEnhancer.try_invidious_transcript(video_id)
+    if transcript:
+        return format_transcript(transcript)
 
     return None
 
