@@ -338,6 +338,26 @@ class PipelineDB:
             )
             conn.commit()
 
+    def get_last_run(self) -> Optional[Dict[str, Any]]:
+        """Get the most recent pipeline run."""
+        with self._connect() as conn:
+            cursor = conn.execute(
+                "SELECT * FROM pipeline_runs ORDER BY started_at DESC LIMIT 1"
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None
+            return dict(zip([column[0] for column in cursor.description], row))
+
+    def get_run_summary(self, run_id: str) -> Dict[str, Any]:
+        """Get status summary for a specific run."""
+        with self._connect() as conn:
+            cursor = conn.execute(
+                "SELECT status, COUNT(*) FROM pipeline_items GROUP BY status"
+            )
+            stats = dict(cursor.fetchall())
+            return stats
+
 
 class PipelineOrchestrator:
     """Run discovery, extraction, and auditing as a single pipeline."""
@@ -402,6 +422,13 @@ class PipelineOrchestrator:
         if mode not in {"weekly", "dev"}:
             raise ValueError(f"Unknown mode: {mode}")
 
+        last_run = self.db.get_last_run()
+        if last_run and last_run["status"] == "error" and not replay and not force:
+            self._log(
+                f"Warning: Last run {last_run['run_id']} failed. "
+                "Consider using --replay to resume or --force to restart."
+            )
+
         force = force or replay or mode == "dev"
         run_id = datetime.now().strftime("%Y%m%d%H%M%S")
         self.db.begin_run(
@@ -434,34 +461,35 @@ class PipelineOrchestrator:
                 self.extractor.min_content_length = 700
                 self._log("dev mode: extractor.min_content_length set to 700")
 
-            if start_stage == "discover":
-                discovered = self.discover(run_id=run_id)
-                extracted = self.extract(
-                    force=force, limit=limit, retry_failed_only=retry_failed_only
-                )
-                self.write_unified_audit()
-                self._write_scrape_run(
-                    run_id, "extract", discovered, extracted, force=force, limit=limit
-                )
-                self.db.end_run(run_id, "done")
-                self._log("run complete")
-                return {"discovered": discovered, "extracted": extracted}
-
-            if start_stage == "extract":
-                extracted = self.extract(
-                    force=force, limit=limit, retry_failed_only=retry_failed_only
-                )
-                self.write_unified_audit()
-                self._write_scrape_run(run_id, "extract", 0, extracted, force=force, limit=limit)
-                self.db.end_run(run_id, "done")
-                self._log("run complete")
-                return {"discovered": 0, "extracted": extracted}
-
-            self.write_unified_audit()
-            self._write_scrape_run(run_id, "audit", 0, 0, force=force, limit=limit)
+            stages = ["discover", "extract", "audit"]
+            results = {"discovered": 0, "extracted": 0}
+            
+            # Filter stages based on start_stage
+            active_stages = stages[stages.index(start_stage):]
+            
+            for stage in active_stages:
+                self._log(f"executing stage: {stage}")
+                
+                if stage == "discover":
+                    results["discovered"] = self.discover(run_id=run_id)
+                elif stage == "extract":
+                    results["extracted"] = self.extract(
+                        force=force, limit=limit, retry_failed_only=retry_failed_only
+                    )
+                elif stage == "audit":
+                    self.write_unified_audit()
+                    
+            self._write_scrape_run(
+                run_id, active_stages[-1], results["discovered"], results["extracted"], 
+                force=force, limit=limit
+            )
             self.db.end_run(run_id, "done")
             self._log("run complete")
-            return {"discovered": 0, "extracted": 0}
+            
+            summary = self.db.get_run_summary(run_id)
+            self._log(f"Run Summary: {summary}")
+            
+            return results
         except Exception:
             self.db.end_run(run_id, "error")
             self._log("run failed")
