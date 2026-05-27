@@ -1147,6 +1147,9 @@ class PipelineOrchestrator:
         content_words = None
 
         if result and status == "done":
+            if result.published_at and not post.get("published_at"):
+                post["published_at"] = result.published_at
+
             content_path = self.extractor.save_markdown(
                 job_id,
                 result.content,
