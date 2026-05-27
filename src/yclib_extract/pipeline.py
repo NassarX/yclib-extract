@@ -897,6 +897,12 @@ class PipelineOrchestrator:
                         markdown, metrics
                     )
 
+                    # Format the date for Obsidian (YYYY-MM-DD)
+                    formatted_date = ""
+                    if published_date:
+                        # Handle Atom feed format (e.g., 2023-05-01T00:00:00Z)
+                        formatted_date = published_date.split("T")[0]
+
                     metadata = {
                         "id": title_slug,
                         "url": url,
@@ -908,7 +914,7 @@ class PipelineOrchestrator:
                         "source_type": "essay",
                         "file": filename,
                         "source_url": url,
-                        "published": published_date or "",
+                        "published_at": formatted_date,
                         "word_count": word_count,
                         "reading_time": reading_time,
                         "quality": metrics.get("quality_level"),
@@ -933,7 +939,11 @@ class PipelineOrchestrator:
                     "status": status,
                     "reason": reason,
                     "local_path": str(output_path),
-                    "published": published_date or "",
+                    "published_at": (
+                        formatted_date
+                        if status == "fetched"
+                        else (published_date.split("T")[0] if published_date else "")
+                    ),
                     "quality": metadata.get("quality") if status == "fetched" else None,
                 }
             )
