@@ -15,7 +15,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
-from xml.etree import ElementTree as ET
 
 import requests
 from bs4 import BeautifulSoup
@@ -23,7 +22,6 @@ from bs4 import BeautifulSoup
 from .extractor import (
     DEFAULT_CONTENT_DIR,
     DEFAULT_DB_PATH,
-    REMOVED_WORD_THRESHOLD,
     ContentExtractor,
     YCLibraryExtractionEnhancer,
 )
@@ -104,7 +102,8 @@ def _load_metadata_posts(metadata_path: str) -> List[Dict[str, Any]]:
         data = _load_json(path)
         # Check if it has a "posts" key (new format with consolidated structure)
         if isinstance(data, dict) and "posts" in data:
-            return data.get("posts", [])
+            posts = data.get("posts", [])
+            return posts if isinstance(posts, list) else []
         # Otherwise return the data as-is if it's a list
         if isinstance(data, list):
             return data
@@ -176,7 +175,7 @@ class PipelineDB:
 
     @contextlib.contextmanager
     def _connect(self):
-        """Internal helper to ensure connections are always closed and use a timeout for robustness."""
+        """Ensure connections are closed and use a timeout for robustness."""
         conn = sqlite3.connect(self.db_path, timeout=30)
         try:
             yield conn
@@ -592,7 +591,7 @@ class PipelineOrchestrator:
 
     def _fetch_pg_index_urls(self) -> List[str]:
         """Fetch all Paul Graham essay URLs from both HTML index and RSS feed."""
-        urls = set()
+        urls: set[str] = set()
 
         # 1. Fetch from HTML index (archive)
         try:
@@ -600,7 +599,7 @@ class PipelineOrchestrator:
             response.raise_for_status()
             soup = BeautifulSoup(response.text, "html.parser")
             for link in soup.find_all("a", href=True):
-                absolute = urljoin(PG_ARTICLES_INDEX_URL, link["href"])
+                absolute = urljoin(PG_ARTICLES_INDEX_URL, str(link["href"]))
                 parsed = urlparse(absolute)
                 if parsed.netloc.lower() not in {"paulgraham.com", "www.paulgraham.com"}:
                     continue
@@ -618,8 +617,9 @@ class PipelineOrchestrator:
         try:
             rss = RSSScraper(PG_RSS_URL)
             for item in rss.fetch_items():
-                if item.get("url"):
-                    urls.add(item["url"])
+                url = item.get("url")
+                if isinstance(url, str) and url:
+                    urls.add(url)
         except Exception as e:
             self._log(f"Warning: Failed to fetch PG RSS feed: {e}")
 
@@ -634,7 +634,7 @@ class PipelineOrchestrator:
         # Build URL-to-slug map for internal link processing
         url_to_slug: Dict[str, str] = {url: self._pg_slug(url) for url in urls}
 
-        audit_rows: List[Dict[str, str]] = []
+        audit_rows: list[Dict[str, Any]] = []
         fetched = 0
         skipped_existing = 0
         failed = 0
@@ -754,14 +754,18 @@ class PipelineOrchestrator:
         Falls back to archive HTML parsing if feed is unavailable.
         Returns list of (url, published_date) tuples sorted by date (oldest first).
         """
-        urls_with_dates = []
+        urls_with_dates: list[tuple[str, Optional[str]]] = []
 
         try:
             rss = RSSScraper(SA_ARTICLES_FEED_URL)
             items = rss.fetch_items()
             for item in items:
-                if item.get("url"):
-                    urls_with_dates.append((item["url"], item.get("date")))
+                url = item.get("url")
+                if isinstance(url, str) and url:
+                    date_value = item.get("date")
+                    urls_with_dates.append(
+                        (url, date_value if isinstance(date_value, str) else None)
+                    )
 
             if urls_with_dates:
                 self._log(f"fetched {len(urls_with_dates)} URLs from Atom feed")
@@ -785,7 +789,7 @@ class PipelineOrchestrator:
 
             soup = BeautifulSoup(content, "html.parser")
             for link in soup.find_all("a", href=True):
-                absolute = urljoin(SA_ARCHIVE_URL, link["href"])
+                absolute = urljoin(SA_ARCHIVE_URL, str(link["href"]))
                 parsed = urlparse(absolute)
                 if parsed.netloc.lower() not in {"blog.samaltman.com", "www.blog.samaltman.com"}:
                     continue
@@ -817,7 +821,7 @@ class PipelineOrchestrator:
         # Build URL-to-slug map for internal link processing
         url_to_slug: Dict[str, str] = {}
 
-        audit_rows: List[Dict[str, str]] = []
+        audit_rows: list[Dict[str, Any]] = []
         fetched = 0
         skipped_existing = 0
         failed = 0
@@ -853,7 +857,7 @@ class PipelineOrchestrator:
                     title = ""
                     og_title = soup.find("meta", property="og:title")
                     if og_title and og_title.get("content"):
-                        title = og_title["content"]
+                        title = str(og_title["content"])
 
                     if not title:
                         # Fallback to post-title h2 common on Posthaven
@@ -1004,7 +1008,7 @@ class PipelineOrchestrator:
         input_dir = _slugify(self.metadata_dir.name.replace("_", "-"))
         date_key = datetime.now().strftime("%Y%m%d")
         filename = f"yc_content_runs_{date_key}.json"
-        run_summary = {
+        run_summary: Dict[str, Any] = {
             "type": run_type,
             "state": "done",
             "input_dir": input_dir,
@@ -1020,7 +1024,7 @@ class PipelineOrchestrator:
             "run_id": run_id,
         }
         output_path = SCRAPE_RUNS_DIR / filename
-        payload = {"date": date_key, "runs": []}
+        payload: Dict[str, Any] = {"date": date_key, "runs": []}
         if output_path.exists():
             try:
                 existing = json.loads(output_path.read_text())
@@ -1039,7 +1043,7 @@ class PipelineOrchestrator:
     def _build_run_summary(
         self, items: List[Dict[str, Any]], posts: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        summary = {
+        summary: Dict[str, Any] = {
             "done": 0,
             "missing": 0,
             "by_source_type": {},
@@ -1089,7 +1093,7 @@ class PipelineOrchestrator:
         retry_failed_only: bool = False,
     ) -> int:
         self._log(f"loading metadata from {self.metadata_dir}")
-        posts = []
+        posts: list[Dict[str, Any]] = []
         seen_urls = set()
         ignore_sources = load_ignore_sources()
 
@@ -1205,7 +1209,7 @@ class PipelineOrchestrator:
     def write_unified_audit(self) -> str:
         """Unify all audits from 4 parts into a single CSV file."""
         self._log(f"generating unified audit: {UNIFIED_AUDIT_CSV}")
-        rows = []
+        rows: list[Dict[str, Any]] = []
         seen_urls = set()
 
         from .extractor import ExtractionDB
@@ -1225,8 +1229,8 @@ class PipelineOrchestrator:
 
             job_id = item.get("id")
             filename = item.get("file") or f"{job_id}.md"
-            local_path = SA_STARTUP_DIR / filename
-            is_done = local_path.exists()
+            local_path_path = SA_STARTUP_DIR / filename
+            is_done = local_path_path.exists()
 
             job_info = job_stats_by_url.get(url) or {}
             quality = job_info.get("quality") or ""
@@ -1242,7 +1246,7 @@ class PipelineOrchestrator:
                     "type": (item.get("type") or item.get("source_type") or "Article").title(),
                     "status": "done" if is_done else "missing",
                     "quality": quality,
-                    "local_path": str(local_path) if is_done else "",
+                    "local_path": str(local_path_path) if is_done else "",
                     "reason": "" if is_done else "Not yet extracted or copied",
                 }
             )
@@ -1326,38 +1330,39 @@ class PipelineOrchestrator:
                 meta = lib_meta_map.get(url)
 
                 # Find local path
-                local_path = ""
+                local_path_str = ""
                 if status == "done":
                     # Use filename from metadata if available, otherwise job_id
                     filename = (meta.get("file") or f"{job_id}.md") if meta else f"{job_id}.md"
                     p = self.content_dir / filename
                     if p.exists():
-                        local_path = str(p)
+                        local_path_str = str(p)
 
                 seen_urls.add(url)
+                type_value = (
+                    meta.get("type")
+                    if meta and meta.get("type")
+                    else (
+                        meta.get("source_type")
+                        if meta and meta.get("source_type")
+                        else job.get("source_type", "article") or "article"
+                    )
+                )
                 rows.append(
                     {
                         "source": source,
                         "id": job_id,
-                        "title": meta.get("title") if meta else job_id,
+                        "title": meta.get("title") if meta and meta.get("title") else job_id,
                         "url": url,
                         "source_url": (
                             (meta.get("media_url") or meta.get("source_url") or url)
                             if meta
                             else url
                         ),
-                        "type": (
-                            meta.get("type")
-                            if meta
-                            else (
-                                None or meta.get("source_type")
-                                if meta
-                                else None or job.get("source_type", "article") or "article"
-                            )
-                        ).title(),
+                        "type": str(type_value).title(),
                         "status": status,
                         "quality": quality,
-                        "local_path": local_path,
+                        "local_path": local_path_str,
                         "reason": job.get("error_msg", ""),
                     }
                 )
@@ -1495,11 +1500,18 @@ def main():
             replay=args.replay,
             force=args.force,
         )
+        print("Full extraction complete:")
         print(
-            "Full extraction complete: "
-            f"PG essays: {result.get('pg_fetched', 0)} fetched, {result.get('pg_failed', 0)} failed | "
-            f"SA essays: {result.get('sa_fetched', 0)} fetched, {result.get('sa_failed', 0)} failed | "
-            f"YC: {result.get('discovered', 0)} discovered, {result.get('extracted', 0)} extracted"
+            f"PG essays: {result.get('pg_fetched', 0)} fetched, "
+            f"{result.get('pg_failed', 0)} failed"
+        )
+        print(
+            f"SA essays: {result.get('sa_fetched', 0)} fetched, "
+            f"{result.get('sa_failed', 0)} failed"
+        )
+        print(
+            f"YC: {result.get('discovered', 0)} discovered, "
+            f"{result.get('extracted', 0)} extracted"
         )
 
 

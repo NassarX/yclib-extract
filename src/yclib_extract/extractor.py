@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 
 from .lib.html_cleaning import extract_main_content, extract_page_metadata, html_to_markdown
 from .lib.youtube_transcripts import extract_podcast_url, extract_youtube_url, get_transcript
-from .scraper import is_ignored, load_ignore_sources
+from .scraper import _slugify, is_ignored, load_ignore_sources
 
 ARTIFACTS_DIR = Path("artifacts").resolve()
 DEFAULT_DB_PATH = str(ARTIFACTS_DIR / "extraction_jobs.db")
@@ -58,7 +58,7 @@ class ExtractionDB:
 
     @contextlib.contextmanager
     def _connect(self):
-        """Internal helper to ensure connections are always closed and use a timeout for robustness."""
+        """Ensure connections are closed and use a timeout for robustness."""
         conn = sqlite3.connect(self.db_path, timeout=30)
         try:
             yield conn
@@ -169,7 +169,7 @@ class ExtractionDB:
                 return dict(zip(cols, row))
         return None
 
-    def get_all_jobs(self) -> List[Dict[str, Any]]:
+    def get_all_jobs(self) -> list[Dict[str, Any]]:
         """Retrieve all extraction jobs."""
         with self._connect() as conn:
             cursor = conn.execute("SELECT * FROM extraction_jobs ORDER BY last_attempt DESC")
@@ -225,7 +225,7 @@ class ContentExtractor:
             if not content_html:
                 # If we have a media hint, we might still be able to save it
                 if media_url_hint:
-                    content_html = f"<p>External media resource.</p>"
+                    content_html = "<p>External media resource.</p>"
                 else:
                     self.db.update_job_status(job_id, "failed", error_msg="No content found")
                     return None
@@ -251,7 +251,7 @@ class ContentExtractor:
                 normalized_source_type = "podcast"
             canonical_source_type = self._canonical_source_type(normalized_source_type)
 
-            quality = None
+            quality: Optional[str] = None
             if is_video and (len(markdown) < self.min_content_length or not content_html):
                 if video_url:
                     transcript = get_transcript(video_url)
@@ -268,7 +268,7 @@ class ContentExtractor:
             if normalized_source_type in {"external"}:
                 status = "done"
             elif is_video and video_url:
-                # If it's a video and we have the URL, we keep it even if short (metadata is valuable)
+                # Keep video metadata even when body content is short.
                 status = "done"
             elif normalized_source_type == "podcast" and podcast_url:
                 status = "done"
@@ -322,7 +322,8 @@ class ContentExtractor:
             self.db.update_job_status(job_id, "failed", error_msg="Request timeout")
             return None
         except requests.exceptions.HTTPError as e:
-            self.db.update_job_status(job_id, "error", error_msg=f"HTTP {e.response.status_code}")
+            status_code = e.response.status_code if e.response is not None else "unknown"
+            self.db.update_job_status(job_id, "error", error_msg=f"HTTP {status_code}")
             return None
         except Exception as exc:
             self.db.update_job_status(job_id, "error", error_msg=str(exc))
@@ -568,9 +569,7 @@ class YCLibraryExtractionEnhancer:
         Returns:
             Quality metrics dict
         """
-        import time
-
-        metrics = {
+        metrics: dict[str, Any] = {
             "content_length": len(content),
             "title_present": bool(metadata.get("title")),
             "author_present": bool(metadata.get("author")),

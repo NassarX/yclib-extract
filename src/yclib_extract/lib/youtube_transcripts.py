@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import html as html_lib
 import json
@@ -5,7 +7,7 @@ import os
 import re
 import sys
 import xml.etree.ElementTree as ET
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 from urllib.parse import parse_qs, urlparse
 
 import requests
@@ -53,7 +55,7 @@ def extract_podcast_url(html: str) -> Optional[str]:
     match = re.search(r'data-page=(["\'])(.*?)\1', html, flags=re.IGNORECASE | re.DOTALL)
     if match:
         try:
-            payload = json.loads(html_lib.unescape(match.group(2)))
+            payload: dict[str, Any] = json.loads(html_lib.unescape(match.group(2)))
         except (TypeError, ValueError, json.JSONDecodeError):
             payload = {}
         article = payload.get("props", {}).get("article", {}) or {}
@@ -66,8 +68,11 @@ def extract_podcast_url(html: str) -> Optional[str]:
 
     patterns = [
         r'<iframe[^>]+title=["\'][^"\']*Spotify embed[^"\']*["\'][^>]+src=["\']([^"\']+)["\']',
-        r'<iframe[^>]+src=["\'](https://open\.spotify\.com/(?:embed/)?episode/[A-Za-z0-9]+(?:\?[^\s"\'>]*)?)["\']',
-        r'https://open\.spotify\.com/(?:embed/)?episode/[A-Za-z0-9]+(?:\?[^\s"\'>]*)?',
+        (
+            r'<iframe[^>]+src=["\'](https://open\.spotify\.com/'
+            r'(?:embed/)?episode/[A-Za-z0-9]+(?:\?[^\s"\'>]*)?)["\']'
+        ),
+        r"https://open\.spotify\.com/(?:embed/)?episode/[A-Za-z0-9]+(?:\?[^\s\"\'>]*)?",
     ]
 
     for pattern in patterns:
@@ -167,11 +172,11 @@ def get_transcript_from_youtube_api(video_id: str) -> Optional[str]:
         try:
             from youtube_transcript_api import YouTubeTranscriptApi
         except ImportError:
-            print(f"YouTube API transcript requires: pip install yclib-extract[transcripts]")
+            print("YouTube API transcript requires: pip install yclib-extract[transcripts]")
             return None
 
         http_url, https_url = _get_proxy_urls()
-        api_kwargs = {}
+        api_kwargs: dict[str, Any] = {}
         if http_url or https_url:
             try:
                 from youtube_transcript_api.proxies import GenericProxyConfig
@@ -188,6 +193,7 @@ def get_transcript_from_youtube_api(video_id: str) -> Optional[str]:
         if not transcript:
             return None
 
+        entries: Iterable[Any]
         if hasattr(transcript, "snippets"):
             entries = transcript.snippets
         elif hasattr(transcript, "to_raw_data"):
@@ -212,13 +218,13 @@ def get_transcript_from_yt_dlp(video_id: str) -> Optional[str]:
         try:
             import yt_dlp
         except ImportError:
-            print(f"yt-dlp transcript requires: pip install yclib-extract[transcripts-full]")
+            print("yt-dlp transcript requires: pip install yclib-extract[transcripts-full]")
             return None
 
         url = f"https://www.youtube.com/watch?v={video_id}"
         http_url, https_url = _get_proxy_urls()
         proxy_url = https_url or http_url
-        ydl_opts = {
+        ydl_opts: dict[str, bool | str] = {
             "quiet": True,
             "no_warnings": True,
         }
@@ -226,7 +232,7 @@ def get_transcript_from_yt_dlp(video_id: str) -> Optional[str]:
             ydl_opts["proxy"] = proxy_url
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
+            info: dict[str, Any] = ydl.extract_info(url, download=False) or {}
 
         # Try to get captions
         if info.get("subtitles"):
@@ -234,7 +240,9 @@ def get_transcript_from_yt_dlp(video_id: str) -> Optional[str]:
                 captions = info["subtitles"].get(lang, [])
                 for cap in captions:
                     if cap.get("data"):
-                        return cap["data"]
+                        data = cap.get("data")
+                        if isinstance(data, str):
+                            return data
 
         # Fallback to auto-generated
         if info.get("automatic_captions"):
@@ -242,7 +250,9 @@ def get_transcript_from_yt_dlp(video_id: str) -> Optional[str]:
                 captions = info["automatic_captions"].get(lang, [])
                 for cap in captions:
                     if cap.get("data"):
-                        return cap["data"]
+                        data = cap.get("data")
+                        if isinstance(data, str):
+                            return data
 
         return None
     except Exception as e:
@@ -432,7 +442,9 @@ class TranscriptRecoveryEnhancer:
     ]
 
     @staticmethod
-    def try_invidious_transcript(video_id: str, instances: list = None) -> Optional[str]:
+    def try_invidious_transcript(
+        video_id: str, instances: Optional[list[str]] = None
+    ) -> Optional[str]:
         """Try to fetch transcript from Invidious mirror.
 
         Args:

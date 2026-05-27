@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import json
-import os
 import re
 import unicodedata
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, Optional
 from urllib.parse import urlencode
 
 import requests
@@ -45,7 +46,12 @@ def _get_known_yc_algolia_config() -> Dict[str, str]:
     """Return the known YC Algolia configuration used by the legacy scraper."""
     return {
         "appId": "45BWZJ1SGC",
-        "apiKey": "MDlkNDAyNzM1YjA2YTQwYjBkMGIwNjk2Mzg4NDQ3ZGRkMTdhZWJmODM0MDdiNDVhMTNlNDRiYzFlOGZiMGI5MmFuYWx5dGljc1RhZ3M9eWNkYyUyQ2xpYnJhcnkmcmVzdHJpY3RJbmRpY2VzPUxpYnJhcnlfYm9va2ZhY2VfcHJvZHVjdGlvbiZ0YWdGaWx0ZXJzPSU1QiUyMnljZGNfcHVibGljJTIyJTJDJTVCJTIya2Jfcm9vdF8xNzYlMjIlMkMlMjJrYl9yb290XzkxMiUyMiU1RCU1RA==",
+        "apiKey": (
+            "MDlkNDAyNzM1YjA2YTQwYjBkMGIwNjk2Mzg4NDQ3ZGRkMTdhZWJmODM0MDdiNDVhMTNlNDRiZ"
+            "iM5MmFuYWx5dGljc1RhZ3M9eWNkYyUyQ2xpYnJhcnkmcmVzdHJpY3RJbmRpY2VzPUxpYnJhcnlf"
+            "Ym9va2ZhY2VfcHJvZHVjdGlvbiZ0YWdGaWx0ZXJzPSU1QiUyMnljZGNfcHVibGljJTIyJTJDJTV"
+            "CJTIya2Jfcm9vdF8xNzYlMjIlMkMlMjJrYl9yb290XzkxMiUyMiU1RCU1RA=="
+        ),
         "indexName": "Library_bookface_production",
     }
 
@@ -92,7 +98,7 @@ class RSSScraper:
     def __init__(self, feed_url: str):
         self.feed_url = feed_url
 
-    def fetch_items(self) -> List[Dict[str, str]]:
+    def fetch_items(self) -> list[Dict[str, str | None]]:
         """Fetch and parse feed items.
 
         Returns:
@@ -183,7 +189,7 @@ class AlgoliaScraper:
         self.base_url = f"https://{self.app_id}-dsn.algolia.net/1/indexes/{self.index_name}"
         self.queries_url = f"https://{self.app_id}-dsn.algolia.net/1/indexes/*/queries"
 
-    def _make_request(self, params: Dict) -> Dict:
+    def _make_request(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Make Algolia API request."""
         headers = {
             "X-Algolia-Application-Id": self.app_id,
@@ -215,11 +221,12 @@ class AlgoliaScraper:
             timeout=10,
         )
         response.raise_for_status()
-        return response.json()
+        result: Dict[str, Any] = response.json()
+        return result
 
-    def browse_all(self, per_page: int = 1000) -> List[Dict]:
+    def browse_all(self, per_page: int = 1000) -> list[Dict[str, str | None]]:
         """Browse all posts via Algolia."""
-        posts = []
+        posts: list[Dict[str, str | None]] = []
         page = 0
 
         while True:
@@ -239,8 +246,9 @@ class AlgoliaScraper:
             }
 
             result = self._make_request(params)
-            query_result = result.get("results", [{}])[0]
-            posts.extend(query_result.get("hits", []))
+            query_result: Dict[str, Any] = result.get("results", [{}])[0]
+            hits: list[Dict[str, str | None]] = query_result.get("hits", [])
+            posts.extend(hits)
 
             nb_pages = query_result.get("nbPages", 0) or 0
             if page >= nb_pages - 1:
@@ -249,7 +257,7 @@ class AlgoliaScraper:
 
         return posts
 
-    def _normalize_hit(self, hit: Dict) -> Dict:
+    def _normalize_hit(self, hit: Dict[str, Any]) -> Dict[str, Any]:
         """Normalize Algolia hit to post metadata."""
         page_url = hit.get("shared_search_path") or hit.get("slug") or hit.get("url")
         media_url = hit.get("link") or hit.get("url")
@@ -284,11 +292,11 @@ class AlgoliaScraper:
             "source_type": source_type,
         }
 
-    def save_posts(self, posts: List[Dict], output_file: str):
+    def save_posts(self, posts: list[Dict[str, Any]], output_file: str) -> int:
         """Save discovered posts as consolidated JSON metadata file."""
         ignore_sources = load_ignore_sources()
         saved = 0
-        consolidated = []
+        consolidated: list[Dict[str, Any]] = []
 
         for post in posts:
             normalized = self._normalize_hit(post)
@@ -363,8 +371,6 @@ class AlgoliaPageinator:
         Yields:
             Result batches
         """
-        from typing import Dict, Generator, List
-
         import requests
 
         params = {

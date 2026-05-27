@@ -6,9 +6,6 @@ Guides users through:
 3. Validation and .env file generation
 """
 
-import sys
-from pathlib import Path
-
 from ..config import Config
 
 

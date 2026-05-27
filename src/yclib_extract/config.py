@@ -6,7 +6,7 @@ Single source of truth for all configuration across the package.
 
 import os
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 
 def _load_dotenv(path: str = ".env") -> None:
@@ -50,7 +50,12 @@ class Config:
 
     # Algolia defaults (public, hardcoded fallback)
     DEFAULT_ALGOLIA_APP_ID = "45BWZJ1SGC"
-    DEFAULT_ALGOLIA_API_KEY = "MDlkNDAyNzM1YjA2YTQwYjBkMGIwNjk2Mzg4NDQ3ZGRkMTdhZWJmODM0MDdiNDVhMTNlNDRiYzFlOGZiMGI5MmFuYWx5dGljc1RhZ3M9eWNkYyUyQ2xpYnJhcnkmcmVzdHJpY3RJbmRpY2VzPUxpYnJhcnlfYm9va2ZhY2VfcHJvZHVjdGlvbiZ0YWdGaWx0ZXJzPSU1QiUyMnljZGNfcHVibGljJTIyJTJDJTVCJTIya2Jfcm9vdF8xNzYlMjIlMkMlMjJrYl9yb290XzkxMiUyMiU1RCU1RA=="
+    DEFAULT_ALGOLIA_API_KEY = (
+        "MDlkNDAyNzM1YjA2YTQwYjBkMGIwNjk2Mzg4NDQ3ZGRkMTdhZWJmODM0MDdiNDVhMTNlNDRiYz"
+        "FlOGZiMGI5MmFuYWx5dGljc1RhZ3M9eWNkYyUyQ2xpYnJhcnkmcmVzdHJpY3RJbmRpY2VzPUxp"
+        "YnJhcnlfYm9va2ZhY2VfcHJvZHVjdGlvbiZ0YWdGaWx0ZXJzPSU1QiUyMnljZGNfcHVibGljJTI"
+        "yJTJDJTVCJTIya2Jfcm9vdF8xNzYlMjIlMkMlMjJrYl9yb290XzkxMiUyMiU1RCU1RA=="
+    )
     DEFAULT_ALGOLIA_INDEX = "Library_bookface_production"
 
     # Transcript defaults
@@ -116,7 +121,7 @@ class Config:
         ).split(",")
         self.invidious_instances = [s.strip() for s in self.invidious_instances if s.strip()]
 
-    def to_dict(self) -> Dict[str, any]:
+    def to_dict(self) -> Dict[str, Any]:
         """Return config as dictionary for inspection/logging."""
         return {
             "algolia_app_id": (
@@ -171,7 +176,7 @@ INVIDIOUS_INSTANCES={','.join(self.invidious_instances)}
 class YCLibraryConfig:
     """YC Library-specific configuration and extraction tracking."""
 
-    def __init__(self, base_config=None):
+    def __init__(self, base_config: Optional[Dict[str, Any]] = None):
         self.base_config = base_config or {}
         self.quality_thresholds = {
             "min_content_length": 100,
@@ -204,7 +209,7 @@ class YCLibraryConfig:
         # Check if previously failed
         if metadata.get("extraction_status") in ("error", "failed"):
             # Can retry based on config
-            return self.base_config.get("retry_failed", False)
+            return bool(self.base_config.get("retry_failed", False))
 
         return True
 
