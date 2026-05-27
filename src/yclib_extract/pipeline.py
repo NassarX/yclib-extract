@@ -338,6 +338,17 @@ class PipelineDB:
             )
             conn.commit()
 
+    def get_last_run(self) -> Optional[Dict[str, Any]]:
+        """Get the most recent pipeline run."""
+        with self._connect() as conn:
+            cursor = conn.execute(
+                "SELECT * FROM pipeline_runs ORDER BY started_at DESC LIMIT 1"
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None
+            return dict(zip([column[0] for column in cursor.description], row))
+
 
 class PipelineOrchestrator:
     """Run discovery, extraction, and auditing as a single pipeline."""
