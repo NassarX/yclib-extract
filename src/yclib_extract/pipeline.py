@@ -29,6 +29,7 @@ from .extractor import (
 )
 from .lib.html_cleaning import (
     extract_main_content,
+    extract_pg_dates_and_clean,
     html_to_markdown,
     process_footnotes,
     process_internal_links,
@@ -664,6 +665,9 @@ class PipelineOrchestrator:
                     # Process footnotes (e.g., [1] text -> [^1]: text)
                     markdown = process_footnotes(markdown)
 
+                    # Extract dates and remove index.html
+                    markdown, publish_date, revision_date = extract_pg_dates_and_clean(markdown)
+
                     # Extract real title
                     title_node = soup.find("h1") or soup.find("title")
                     if title_node:
@@ -697,6 +701,11 @@ class PipelineOrchestrator:
                         "word_count": word_count,
                         "reading_time": reading_time,
                     }
+                    if publish_date:
+                        metadata["published_at"] = publish_date
+                    if revision_date:
+                        metadata["revised_at"] = revision_date
+
                     self.pg_extractor.save_markdown(
                         title_slug, markdown, metadata, source_type="essay"
                     )

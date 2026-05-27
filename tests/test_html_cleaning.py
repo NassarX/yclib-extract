@@ -117,3 +117,27 @@ def test_extract_author_info_reads_meta_and_class_names():
 
     assert extract_author_info(meta_soup) == "Ada Lovelace"
     assert extract_author_info(class_soup) == "Grace Hopper"
+
+
+import pytest
+
+from yclib_extract.lib.html_cleaning import extract_pg_dates_and_clean
+
+
+def test_extract_pg_dates_and_clean():
+    markdown1 = "[](index.html)\n\nMarch 2004\n\nContent starts here."
+    cleaned, pub, rev = extract_pg_dates_and_clean(markdown1)
+    assert "index.html" not in cleaned
+    assert pub == "2004-03-01"
+    assert rev is None
+
+    markdown2 = "[](index.html)\n\nMarch 2008, rev May 2013\n\nContent"
+    cleaned, pub, rev = extract_pg_dates_and_clean(markdown2)
+    assert "index.html" not in cleaned
+    assert pub == "2008-03-01"
+    assert rev == "2013-05-01"
+
+    # Should not crash on empty
+    cleaned, pub, rev = extract_pg_dates_and_clean("No date here")
+    assert pub is None
+    assert rev is None
