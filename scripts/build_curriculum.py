@@ -372,6 +372,7 @@ def main():
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--inject-only", action="store_true")
     parser.add_argument("--inject-metadata-dir", default=None)
+    parser.add_argument("--cleanup-orphans", action="store_true")
 
     args = parser.parse_args()
     artifacts_dir = Path(args.artifacts_dir)
@@ -420,10 +421,14 @@ def main():
         meta_map = load_metadata_maps(artifacts_dir)
         to_extract = []
         
+        # Track which files are "current" in the curriculum
+        current_files = {"startup_school_curriculum.md"}
+        
         for mod in modules:
             for res in mod.get("resources", []):
                 res_id = res["resolved_id"]
                 filename = f"{res_id}.md"
+                current_files.add(filename)
 
                 if local_exists_for(res, yc_startup_dir) and not args.force:
                     continue
@@ -463,6 +468,13 @@ def main():
                 run_extractor_on(tmpdir, yc_startup_dir, workers=workers, force=args.force)
             finally:
                 shutil.rmtree(tmpdir)
+
+        if args.cleanup_orphans:
+            print(f"🧹 cleaning orphans in {yc_startup_dir}...")
+            for p in yc_startup_dir.glob("*.md"):
+                if p.name not in current_files:
+                    print(f"  - removing orphan: {p.name}")
+                    p.unlink()
 
     print(f"🔨 Building curriculum Markdown...")
     markdown = build_markdown(config, yc_startup_dir)
