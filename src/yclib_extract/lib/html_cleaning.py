@@ -301,9 +301,13 @@ def process_footnotes(markdown: str) -> str:
         if not is_fn_marker_line:
             # Normal line, do regex replacement
             for fn_num in sorted(footnote_indices, key=lambda x: int(x), reverse=True):
+                # Handle standard [1] but not [1](...
                 pattern = rf"\[{re.escape(fn_num)}\](?!\()"
-                replacement = f"[^{fn_num}]"
-                line = re.sub(pattern, replacement, line)
+                line = re.sub(pattern, f"[^{fn_num}]", line)
+                
+                # Handle linked markers like [[1](#f1n)] or [[11](#f11n)]
+                linked_pattern = rf"\[\[{re.escape(fn_num)}\]\(#f\d+n\)\]"
+                line = re.sub(linked_pattern, f"[^{fn_num}]", line)
         
         result_body_lines.append(line)
 
