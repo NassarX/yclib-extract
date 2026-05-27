@@ -50,7 +50,12 @@ class Config:
 
     # Algolia defaults (public, hardcoded fallback)
     DEFAULT_ALGOLIA_APP_ID = "45BWZJ1SGC"
-    DEFAULT_ALGOLIA_API_KEY = "MDlkNDAyNzM1YjA2YTQwYjBkMGIwNjk2Mzg4NDQ3ZGRkMTdhZWJmODM0MDdiNDVhMTNlNDRiYzFlOGZiMGI5MmFuYWx5dGljc1RhZ3M9eWNkYyUyQ2xpYnJhcnkmcmVzdHJpY3RJbmRpY2VzPUxpYnJhcnlfYm9va2ZhY2VfcHJvZHVjdGlvbiZ0YWdGaWx0ZXJzPSU1QiUyMnljZGNfcHVibGljJTIyJTJDJTVCJTIya2Jfcm9vdF8xNzYlMjIlMkMlMjJrYl9yb290XzkxMiUyMiU1RCU1RA=="
+    DEFAULT_ALGOLIA_API_KEY = (
+        "MDlkNDAyNzM1YjA2YTQwYjBkMGIwNjk2Mzg4NDQ3ZGRkMTdhZWJmODM0MDdiNDVhMTNlNDRiYz"
+        "FlOGZiMGI5MmFuYWx5dGljc1RhZ3M9eWNkYyUyQ2xpYnJhcnkmcmVzdHJpY3RJbmRpY2VzPUxp"
+        "YnJhcnlfYm9va2ZhY2VfcHJvZHVjdGlvbiZ0YWdGaWx0ZXJzPSU1QiUyMnljZGNfcHVibGljJTI"
+        "yJTJDJTVCJTIya2Jfcm9vdF8xNzYlMjIlMkMlMjJrYl9yb290XzkxMiUyMiU1RCU1RA=="
+    )
     DEFAULT_ALGOLIA_INDEX = "Library_bookface_production"
 
     # Transcript defaults

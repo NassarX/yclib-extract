@@ -66,8 +66,11 @@ def extract_podcast_url(html: str) -> Optional[str]:
 
     patterns = [
         r'<iframe[^>]+title=["\'][^"\']*Spotify embed[^"\']*["\'][^>]+src=["\']([^"\']+)["\']',
-        r'<iframe[^>]+src=["\'](https://open\.spotify\.com/(?:embed/)?episode/[A-Za-z0-9]+(?:\?[^\s"\'>]*)?)["\']',
-        r'https://open\.spotify\.com/(?:embed/)?episode/[A-Za-z0-9]+(?:\?[^\s"\'>]*)?',
+        (
+            r'<iframe[^>]+src=["\'](https://open\.spotify\.com/'
+            r'(?:embed/)?episode/[A-Za-z0-9]+(?:\?[^\s"\'>]*)?)["\']'
+        ),
+        r"https://open\.spotify\.com/(?:embed/)?episode/[A-Za-z0-9]+(?:\?[^\s\"\'>]*)?",
     ]
 
     for pattern in patterns:
@@ -167,7 +170,7 @@ def get_transcript_from_youtube_api(video_id: str) -> Optional[str]:
         try:
             from youtube_transcript_api import YouTubeTranscriptApi
         except ImportError:
-            print(f"YouTube API transcript requires: pip install yclib-extract[transcripts]")
+            print("YouTube API transcript requires: pip install yclib-extract[transcripts]")
             return None
 
         http_url, https_url = _get_proxy_urls()
@@ -212,7 +215,7 @@ def get_transcript_from_yt_dlp(video_id: str) -> Optional[str]:
         try:
             import yt_dlp
         except ImportError:
-            print(f"yt-dlp transcript requires: pip install yclib-extract[transcripts-full]")
+            print("yt-dlp transcript requires: pip install yclib-extract[transcripts-full]")
             return None
 
         url = f"https://www.youtube.com/watch?v={video_id}"

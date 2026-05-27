@@ -5,10 +5,6 @@ Guides users through:
 2. Transcript support preference
 3. Validation and .env file generation
 """
-
-import sys
-from pathlib import Path
-
 from ..config import Config
 
 

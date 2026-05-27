@@ -1,9 +1,8 @@
 import json
-import os
 import re
 import unicodedata
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from urllib.parse import urlencode
 
 import requests
@@ -45,7 +44,12 @@ def _get_known_yc_algolia_config() -> Dict[str, str]:
     """Return the known YC Algolia configuration used by the legacy scraper."""
     return {
         "appId": "45BWZJ1SGC",
-        "apiKey": "MDlkNDAyNzM1YjA2YTQwYjBkMGIwNjk2Mzg4NDQ3ZGRkMTdhZWJmODM0MDdiNDVhMTNlNDRiYzFlOGZiMGI5MmFuYWx5dGljc1RhZ3M9eWNkYyUyQ2xpYnJhcnkmcmVzdHJpY3RJbmRpY2VzPUxpYnJhcnlfYm9va2ZhY2VfcHJvZHVjdGlvbiZ0YWdGaWx0ZXJzPSU1QiUyMnljZGNfcHVibGljJTIyJTJDJTVCJTIya2Jfcm9vdF8xNzYlMjIlMkMlMjJrYl9yb290XzkxMiUyMiU1RCU1RA==",
+        "apiKey": (
+            "MDlkNDAyNzM1YjA2YTQwYjBkMGIwNjk2Mzg4NDQ3ZGRkMTdhZWJmODM0MDdiNDVhMTNlNDRiZ"
+            "iM5MmFuYWx5dGljc1RhZ3M9eWNkYyUyQ2xpYnJhcnkmcmVzdHJpY3RJbmRpY2VzPUxpYnJhcnlf"
+            "Ym9va2ZhY2VfcHJvZHVjdGlvbiZ0YWdGaWx0ZXJzPSU1QiUyMnljZGNfcHVibGljJTIyJTJDJTV"
+            "CJTIya2Jfcm9vdF8xNzYlMjIlMkMlMjJrYl9yb290XzkxMiUyMiU1RCU1RA=="
+        ),
         "indexName": "Library_bookface_production",
     }
 
@@ -92,7 +96,7 @@ class RSSScraper:
     def __init__(self, feed_url: str):
         self.feed_url = feed_url
 
-    def fetch_items(self) -> List[Dict[str, str]]:
+    def fetch_items(self) -> list[Dict[str, str]]:
         """Fetch and parse feed items.
 
         Returns:
@@ -217,7 +221,7 @@ class AlgoliaScraper:
         response.raise_for_status()
         return response.json()
 
-    def browse_all(self, per_page: int = 1000) -> List[Dict]:
+    def browse_all(self, per_page: int = 1000) -> list[Dict]:
         """Browse all posts via Algolia."""
         posts = []
         page = 0
@@ -284,7 +288,7 @@ class AlgoliaScraper:
             "source_type": source_type,
         }
 
-    def save_posts(self, posts: List[Dict], output_file: str):
+    def save_posts(self, posts: list[Dict], output_file: str):
         """Save discovered posts as consolidated JSON metadata file."""
         ignore_sources = load_ignore_sources()
         saved = 0
@@ -363,8 +367,6 @@ class AlgoliaPageinator:
         Yields:
             Result batches
         """
-        from typing import Dict, Generator, List
-
         import requests
 
         params = {
