@@ -92,6 +92,9 @@ def html_to_markdown(html: str, base_url: str = "") -> str:
     parser.feed(html)
     md = parser.get_markdown()
 
+    # Replace non-breaking spaces and zero-width spaces
+    md = md.replace("\xa0", " ").replace("\u200b", "")
+
     # Cleanup extra whitespace
     md = re.sub(r"\n\n+", "\n\n", md)
     md = re.sub(r"[ \t]+\n", "\n", md)
