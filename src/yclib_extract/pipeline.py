@@ -25,6 +25,7 @@ from .extractor import (
     DEFAULT_DB_PATH,
     REMOVED_WORD_THRESHOLD,
     ContentExtractor,
+    YCLibraryExtractionEnhancer,
 )
 from .lib.html_cleaning import (
     extract_main_content,
@@ -688,6 +689,7 @@ class PipelineOrchestrator:
                     "status": status,
                     "reason": reason,
                     "local_path": str(output_path),
+                    "quality": metadata.get("quality") if status == "fetched" else None,
                 }
             )
 
@@ -851,6 +853,13 @@ class PipelineOrchestrator:
                     word_count = _count_words(markdown)
                     reading_time = _estimate_reading_time(word_count)
 
+                    metrics = YCLibraryExtractionEnhancer.track_extraction_quality(
+                        markdown, {"title": title, "author": "Sam Altman"}
+                    )
+                    markdown = YCLibraryExtractionEnhancer.enrich_with_quality_markers(
+                        markdown, metrics
+                    )
+
                     metadata = {
                         "id": title_slug,
                         "url": url,
@@ -865,6 +874,7 @@ class PipelineOrchestrator:
                         "published": published_date or "",
                         "word_count": word_count,
                         "reading_time": reading_time,
+                        "quality": metrics.get("quality_level"),
                     }
                     self.sa_extractor.save_markdown(
                         title_slug, markdown, metadata, source_type="essay"
@@ -887,6 +897,7 @@ class PipelineOrchestrator:
                     "reason": reason,
                     "local_path": str(output_path),
                     "published": published_date or "",
+                    "quality": metadata.get("quality") if status == "fetched" else None,
                 }
             )
 
