@@ -349,6 +349,15 @@ class PipelineDB:
                 return None
             return dict(zip([column[0] for column in cursor.description], row))
 
+    def get_run_summary(self, run_id: str) -> Dict[str, Any]:
+        """Get status summary for a specific run."""
+        with self._connect() as conn:
+            cursor = conn.execute(
+                "SELECT status, COUNT(*) FROM pipeline_items GROUP BY status"
+            )
+            stats = dict(cursor.fetchall())
+            return stats
+
 
 class PipelineOrchestrator:
     """Run discovery, extraction, and auditing as a single pipeline."""
@@ -476,6 +485,10 @@ class PipelineOrchestrator:
             )
             self.db.end_run(run_id, "done")
             self._log("run complete")
+            
+            summary = self.db.get_run_summary(run_id)
+            self._log(f"Run Summary: {summary}")
+            
             return results
         except Exception:
             self.db.end_run(run_id, "error")
