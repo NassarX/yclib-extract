@@ -29,6 +29,7 @@ from .extractor import (
 )
 from .lib.html_cleaning import (
     extract_main_content,
+    extract_page_metadata,
     extract_pg_dates_and_clean,
     html_to_markdown,
     process_footnotes,
@@ -899,7 +900,13 @@ class PipelineOrchestrator:
 
                     # Format the date for Obsidian (YYYY-MM-DD)
                     formatted_date = ""
-                    if published_date:
+
+                    # 1. First try to extract the original publication date from the HTML page
+                    page_meta = extract_page_metadata(soup)
+                    if page_meta.get("published_at"):
+                        formatted_date = page_meta["published_at"]
+                    # 2. Fall back to the Atom feed date (which might just be the "updated" date)
+                    elif published_date:
                         # Handle Atom feed format (e.g., 2023-05-01T00:00:00Z)
                         formatted_date = published_date.split("T")[0]
 
