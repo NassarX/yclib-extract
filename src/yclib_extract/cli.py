@@ -65,6 +65,28 @@ def main():
         "--output", default=".env", help="Where to save .env file (default: .env)"
     )
 
+    # Fetch command
+    fetch_parser = subparsers.add_parser("fetch", help="Fetch specific content modules directly")
+    fetch_subparsers = fetch_parser.add_subparsers(dest="target", help="Content target")
+
+    pg_parser = fetch_subparsers.add_parser("pg", help="Fetch Paul Graham essays")
+    pg_parser.add_argument("--force", action="store_true", help="Force re-fetch")
+
+    sa_parser = fetch_subparsers.add_parser("altman", help="Fetch Sam Altman essays")
+    sa_parser.add_argument("--force", action="store_true", help="Force re-fetch")
+
+    # Build command
+    build_parser = subparsers.add_parser("build", help="Build curated outputs")
+    build_subparsers = build_parser.add_subparsers(dest="target", help="Build target")
+
+    school_parser = build_subparsers.add_parser(
+        "startup-school", help="Build standalone curriculum"
+    )
+    school_parser.add_argument("--ensure-local", action="store_true", help="Download missing files")
+    school_parser.add_argument("--cleanup-orphans", action="store_true", help="Remove unused files")
+    school_parser.add_argument("--collect", action="store_true", help="Copy all files to output")
+    school_parser.add_argument("--force", action="store_true", help="Force overwrite")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -125,6 +147,45 @@ def main():
                 replay=args.replay,
                 retry_failed_only=args.retry_failed_only,
             )
+
+    elif args.command == "fetch":
+        from .pipeline import PipelineOrchestrator
+
+        orchestrator = PipelineOrchestrator()
+        if args.target == "pg":
+            print("🚀 Fetching Paul Graham essays...")
+            orchestrator.fetch_pg_essays(force=args.force)
+        elif args.target == "altman":
+            print("🚀 Fetching Sam Altman essays...")
+            orchestrator.fetch_sa_essays(force=args.force)
+        else:
+            fetch_parser.print_help()
+            return 1
+
+    elif args.command == "build":
+        if args.target == "startup-school":
+            # Delegate to the standalone curriculum builder script
+            import subprocess
+            import sys
+
+            script_path = Path(__file__).parent.parent.parent / "scripts" / "build_curriculum.py"
+            cmd = [sys.executable, str(script_path)]
+            if args.ensure_local:
+                cmd.append("--ensure-local")
+            if args.cleanup_orphans:
+                cmd.append("--cleanup-orphans")
+            if args.collect:
+                cmd.append("--collect")
+            if args.force:
+                cmd.append("--force")
+
+            try:
+                subprocess.run(cmd, check=True)
+            except subprocess.CalledProcessError as e:
+                return e.returncode
+        else:
+            build_parser.print_help()
+            return 1
 
     elif args.command == "init":
         from .commands.init import run_init
