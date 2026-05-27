@@ -434,34 +434,31 @@ class PipelineOrchestrator:
                 self.extractor.min_content_length = 700
                 self._log("dev mode: extractor.min_content_length set to 700")
 
-            if start_stage == "discover":
-                discovered = self.discover(run_id=run_id)
-                extracted = self.extract(
-                    force=force, limit=limit, retry_failed_only=retry_failed_only
-                )
-                self.write_unified_audit()
-                self._write_scrape_run(
-                    run_id, "extract", discovered, extracted, force=force, limit=limit
-                )
-                self.db.end_run(run_id, "done")
-                self._log("run complete")
-                return {"discovered": discovered, "extracted": extracted}
-
-            if start_stage == "extract":
-                extracted = self.extract(
-                    force=force, limit=limit, retry_failed_only=retry_failed_only
-                )
-                self.write_unified_audit()
-                self._write_scrape_run(run_id, "extract", 0, extracted, force=force, limit=limit)
-                self.db.end_run(run_id, "done")
-                self._log("run complete")
-                return {"discovered": 0, "extracted": extracted}
-
-            self.write_unified_audit()
-            self._write_scrape_run(run_id, "audit", 0, 0, force=force, limit=limit)
+            stages = ["discover", "extract", "audit"]
+            results = {"discovered": 0, "extracted": 0}
+            
+            # Filter stages based on start_stage
+            active_stages = stages[stages.index(start_stage):]
+            
+            for stage in active_stages:
+                self._log(f"executing stage: {stage}")
+                
+                if stage == "discover":
+                    results["discovered"] = self.discover(run_id=run_id)
+                elif stage == "extract":
+                    results["extracted"] = self.extract(
+                        force=force, limit=limit, retry_failed_only=retry_failed_only
+                    )
+                elif stage == "audit":
+                    self.write_unified_audit()
+                    
+            self._write_scrape_run(
+                run_id, active_stages[-1], results["discovered"], results["extracted"], 
+                force=force, limit=limit
+            )
             self.db.end_run(run_id, "done")
             self._log("run complete")
-            return {"discovered": 0, "extracted": 0}
+            return results
         except Exception:
             self.db.end_run(run_id, "error")
             self._log("run failed")
