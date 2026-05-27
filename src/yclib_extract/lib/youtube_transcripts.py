@@ -341,6 +341,15 @@ def format_transcript(text: str, max_length: Optional[int] = None) -> str:
     # Basic cleanup
     text = re.sub(r"\s+", " ", text)  # Normalize whitespace
     text = re.sub(r"[“”]", '"', text)  # Normalize quotes
+    
+    # [Placeholder] Simple speaker detection (heuristic)
+    # Match names like "Garry Tan:" or ">> Speaker:" at the beginning of phrases
+    text = re.sub(r"(>>\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*:)", r"\n\n\1", text)
+    
+    # Handle common case where speaker is just a capitalized name followed by colon
+    # but avoid matching common words at start of sentences
+    # This is a placeholder for real diarization
+    text = re.sub(r"(?<= )([A-Z][a-z]+ [A-Z][a-z]+:)", r"\n\n\1", text)
 
     if max_length:
         text = text[:max_length]
