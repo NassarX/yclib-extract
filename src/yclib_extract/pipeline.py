@@ -848,6 +848,9 @@ class PipelineOrchestrator:
                         markdown, blog_domain="blog.samaltman.com", url_to_slug_map=url_to_slug
                     )
 
+                    word_count = _count_words(markdown)
+                    reading_time = _estimate_reading_time(word_count)
+
                     metadata = {
                         "id": title_slug,
                         "url": url,
@@ -860,6 +863,8 @@ class PipelineOrchestrator:
                         "file": filename,
                         "source_url": url,
                         "published": published_date or "",
+                        "word_count": word_count,
+                        "reading_time": reading_time,
                     }
                     self.sa_extractor.save_markdown(
                         title_slug, markdown, metadata, source_type="essay"
