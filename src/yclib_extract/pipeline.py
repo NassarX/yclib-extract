@@ -72,6 +72,12 @@ def _count_words(text: str) -> int:
     return len([token for token in text.split() if token.strip()])
 
 
+def _estimate_reading_time(word_count: int) -> str:
+    """Estimate reading time in minutes (assuming 200 wpm)."""
+    minutes = max(1, round(word_count / 200))
+    return f"{minutes} min"
+
+
 def _load_json(path: Path) -> Dict[str, Any]:
     with path.open() as handle:
         data = json.load(handle)
@@ -645,6 +651,9 @@ class PipelineOrchestrator:
                         markdown, blog_domain="paulgraham.com", url_to_slug_map=url_to_slug
                     )
 
+                    word_count = _count_words(markdown)
+                    reading_time = _estimate_reading_time(word_count)
+
                     metadata = {
                         "id": title_slug,
                         "url": url,
@@ -656,6 +665,8 @@ class PipelineOrchestrator:
                         "source_type": "essay",
                         "file": filename,
                         "source_url": url,
+                        "word_count": word_count,
+                        "reading_time": reading_time,
                     }
                     self.pg_extractor.save_markdown(
                         title_slug, markdown, metadata, source_type="essay"
