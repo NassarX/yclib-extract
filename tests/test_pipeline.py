@@ -2,8 +2,8 @@ import csv
 import json
 import os
 from datetime import datetime
-from types import SimpleNamespace
 from pathlib import Path
+from types import SimpleNamespace
 
 from yclib_extract.pipeline import PipelineOrchestrator
 

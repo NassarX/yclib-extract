@@ -5,8 +5,8 @@ import os
 import re
 import sys
 import xml.etree.ElementTree as ET
-from urllib.parse import parse_qs, urlparse
 from typing import Iterable, Optional
+from urllib.parse import parse_qs, urlparse
 
 import requests
 
@@ -157,18 +157,17 @@ def _get_requests_proxies() -> Optional[dict]:
         proxies["https"] = https_url
     return proxies or None
 
+
 def get_transcript_from_youtube_api(video_id: str) -> Optional[str]:
     """Fetch transcript using YouTubeTranscriptApi.
-    
+
     Requires: pip install yclib-extract[transcripts]
     """
     try:
         try:
             from youtube_transcript_api import YouTubeTranscriptApi
         except ImportError:
-            print(
-                f"YouTube API transcript requires: pip install yclib-extract[transcripts]"
-            )
+            print(f"YouTube API transcript requires: pip install yclib-extract[transcripts]")
             return None
 
         http_url, https_url = _get_proxy_urls()
@@ -206,16 +205,14 @@ def get_transcript_from_youtube_api(video_id: str) -> Optional[str]:
 
 def get_transcript_from_yt_dlp(video_id: str) -> Optional[str]:
     """Fetch transcript using yt-dlp captions download.
-    
+
     Requires: pip install yclib-extract[transcripts-full]
     """
     try:
         try:
             import yt_dlp
         except ImportError:
-            print(
-                f"yt-dlp transcript requires: pip install yclib-extract[transcripts-full]"
-            )
+            print(f"yt-dlp transcript requires: pip install yclib-extract[transcripts-full]")
             return None
 
         url = f"https://www.youtube.com/watch?v={video_id}"
@@ -319,12 +316,16 @@ def get_transcript_from_youtube_page(video_id: str, with_timestamps: bool = Fals
         response.raise_for_status()
 
         caption_urls = _extract_caption_urls_from_html(response.text)
-        caption_urls = sorted(caption_urls, key=lambda u: (0 if _is_english_language(_caption_url_lang(u)) else 1, u))
+        caption_urls = sorted(
+            caption_urls, key=lambda u: (0 if _is_english_language(_caption_url_lang(u)) else 1, u)
+        )
 
         for caption_url in caption_urls:
             caption_response = requests.get(caption_url, timeout=15, proxies=proxies)
             caption_response.raise_for_status()
-            transcript = _parse_caption_payload(caption_response.text, with_timestamps=with_timestamps)
+            transcript = _parse_caption_payload(
+                caption_response.text, with_timestamps=with_timestamps
+            )
             if transcript:
                 return transcript
     except Exception as e:
@@ -341,11 +342,11 @@ def format_transcript(text: str, max_length: Optional[int] = None) -> str:
     # Basic cleanup
     text = re.sub(r"\s+", " ", text)  # Normalize whitespace
     text = re.sub(r"[“”]", '"', text)  # Normalize quotes
-    
+
     # [Placeholder] Simple speaker detection (heuristic)
     # Match names like "Garry Tan:" or ">> Speaker:" at the beginning of phrases
     text = re.sub(r"(>>\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*:)", r"\n\n\1", text)
-    
+
     # Handle common case where speaker is just a capitalized name followed by colon
     # but avoid matching common words at start of sentences
     # This is a placeholder for real diarization
@@ -424,48 +425,48 @@ class TranscriptRecoveryEnhancer:
 
     # Invidious instances for fallback
     DEFAULT_INVIDIOUS_INSTANCES = [
-        'yewtu.cafe',
-        'inv.riverside.rocks',
-        'yt.artemislena.eu',
-        'invidio.us'
+        "yewtu.cafe",
+        "inv.riverside.rocks",
+        "yt.artemislena.eu",
+        "invidio.us",
     ]
 
     @staticmethod
     def try_invidious_transcript(video_id: str, instances: list = None) -> Optional[str]:
         """Try to fetch transcript from Invidious mirror.
-        
+
         Args:
             video_id: YouTube video ID
             instances: List of Invidious instances to try
-            
+
         Returns:
             Transcript text or None if unavailable
         """
         if instances is None:
             instances = TranscriptRecoveryEnhancer.DEFAULT_INVIDIOUS_INSTANCES
-        
+
         for instance in instances:
             try:
                 url = f"https://{instance}/api/v1/captions/{video_id}"
                 resp = requests.get(url, timeout=5)
                 if resp.status_code == 200:
                     data = resp.json()
-                    captions = data.get('captions', [])
+                    captions = data.get("captions", [])
                     if captions:
                         # Get English or first available caption
                         for cap in captions:
-                            if cap.get('label', '').startswith('English'):
+                            if cap.get("label", "").startswith("English"):
                                 return TranscriptRecoveryEnhancer._download_invidious_captions(
-                                    instance, video_id, cap.get('label')
+                                    instance, video_id, cap.get("label")
                                 )
                         # Fallback to first available
                         if captions:
                             return TranscriptRecoveryEnhancer._download_invidious_captions(
-                                instance, video_id, captions[0].get('label')
+                                instance, video_id, captions[0].get("label")
                             )
             except Exception:
                 continue
-        
+
         return None
 
     @staticmethod
@@ -473,11 +474,11 @@ class TranscriptRecoveryEnhancer:
         """Download actual captions from Invidious."""
         try:
             url = f"https://{instance}/api/v1/captions/{video_id}"
-            params = {'label': label}
+            params = {"label": label}
             resp = requests.get(url, params=params, timeout=5)
             if resp.status_code == 200:
-                lines = [line.strip() for line in resp.text.split('\n') if line.strip()]
-                return '\n'.join(lines)
+                lines = [line.strip() for line in resp.text.split("\n") if line.strip()]
+                return "\n".join(lines)
         except Exception:
             pass
         return None

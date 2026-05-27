@@ -1,32 +1,39 @@
 """Tests for the Sam Altman essay extraction pipeline."""
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 from yclib_extract.pipeline import PipelineOrchestrator
 from yclib_extract.scraper import RSSScraper
+
 
 def test_sa_index_discovery():
     """Test that Sam Altman index discovery uses RSSScraper."""
     orch = PipelineOrchestrator()
-    
+
     with patch("yclib_extract.scraper.RSSScraper.fetch_items") as mock_fetch:
         mock_fetch.return_value = [
             {"url": "https://blog.samaltman.com/essay1", "date": "2023-01-01"},
             {"url": "https://blog.samaltman.com/essay2", "date": "2023-01-02"},
         ]
-        
+
         urls_with_dates = orch._fetch_sa_index_urls()
-        
+
         assert len(urls_with_dates) == 2
         assert urls_with_dates[0][0] == "https://blog.samaltman.com/essay1"
         assert urls_with_dates[1][0] == "https://blog.samaltman.com/essay2"
 
+
 def test_sa_slug_generation():
     """Test canonical slug generation for Sam Altman essays."""
     orch = PipelineOrchestrator()
-    assert orch._sa_slug("https://blog.samaltman.com/how-to-be-successful") == "how-to-be-successful"
+    assert (
+        orch._sa_slug("https://blog.samaltman.com/how-to-be-successful") == "how-to-be-successful"
+    )
     assert orch._sa_slug("https://blog.samaltman.com/2279512") == "2279512"
     assert orch._sa_slug("https://blog.samaltman.com/") == "essay"
+
 
 @patch("requests.get")
 def test_rss_scraper_altman_format(mock_get):
@@ -40,10 +47,10 @@ def test_rss_scraper_altman_format(mock_get):
       </entry>
     </feed>"""
     mock_get.return_value.raise_for_status = MagicMock()
-    
+
     scraper = RSSScraper("https://blog.samaltman.com/posts.atom")
     items = scraper.fetch_items()
-    
+
     assert len(items) == 1
     assert items[0]["title"] == "Idea Generation"
     assert items[0]["url"] == "https://blog.samaltman.com/idea-generation"

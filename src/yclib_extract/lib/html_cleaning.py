@@ -59,7 +59,7 @@ class MarkdownHTMLParser(HTMLParser):
                 self.text.append("\n")
             elif tag in ("p", "li"):
                 self.text.append("\n")
-            
+
             if self.stack and self.stack[-1] == tag:
                 self.stack.pop()
 
@@ -211,7 +211,7 @@ def process_internal_links(
 
         # Parse the link URL
         parsed = urlparse(link_url)
-        
+
         # Resolve relative links if possible
         if not parsed.netloc and not link_url.startswith("#"):
             # For PG essays, assume relative links are on paulgraham.com
@@ -234,7 +234,7 @@ def process_internal_links(
             elif clean_url in url_to_slug_map:
                 slug = url_to_slug_map[clean_url]
                 return f"[{link_text}](./{slug}.md)"
-        
+
         # Keep external links or unmapped internal links as is
         return f"[{link_text}]({link_url})"
 
@@ -246,9 +246,9 @@ def process_internal_links(
 def process_footnotes(markdown: str) -> str:
     """
     Process footnotes in markdown text.
-    
+
     Detects the "Notes" or "Footnotes" section at the end of the document,
-    extracts footnote definitions from there, and converts inline [1] 
+    extracts footnote definitions from there, and converts inline [1]
     references in the body to [^1].
     """
     # Find the Notes section. PG essays usually have a "**Notes**" header.
@@ -260,28 +260,28 @@ def process_footnotes(markdown: str) -> str:
         if stripped in ("**notes**", "notes", "**footnotes**", "footnotes"):
             notes_start_idx = i
             break
-    
+
     # If no Notes section found, we still want to try to find footnote definitions
-    # but we must be careful not to eat the body. 
+    # but we must be careful not to eat the body.
     # Actually, for PG essays, they almost always have a Notes section.
-    
+
     body_lines = lines[:notes_start_idx] if notes_start_idx != -1 else lines
     notes_lines = lines[notes_start_idx:] if notes_start_idx != -1 else []
-    
+
     footnotes = {}
     footnote_indices = set()
-    
+
     # Extract footnotes from the notes section
     i = 0
     while i < len(notes_lines):
         line = notes_lines[i]
         stripped = line.strip()
-        
+
         match = re.match(r"^\[(\d+)\](?:\s+(.*))?$", stripped)
         if match:
             fn_num = match.group(1)
             fn_content = [match.group(2).strip()] if match.group(2) else []
-            
+
             i += 1
             while i < len(notes_lines):
                 next_line = notes_lines[i]
@@ -290,7 +290,7 @@ def process_footnotes(markdown: str) -> str:
                     break
                 fn_content.append(next_stripped)
                 i += 1
-            
+
             full_text = " ".join(filter(None, fn_content))
             if full_text:
                 footnotes[fn_num] = full_text
@@ -318,11 +318,11 @@ def process_footnotes(markdown: str) -> str:
                 # Handle standard [1] but not [1](...
                 pattern = rf"\[{re.escape(fn_num)}\](?!\()"
                 line = re.sub(pattern, f"[^{fn_num}]", line)
-                
+
                 # Handle linked markers like [[1](#f1n)] or [[11](#f11n)]
                 linked_pattern = rf"\[\[{re.escape(fn_num)}\]\(#f\d+n\)\]"
                 line = re.sub(linked_pattern, f"[^{fn_num}]", line)
-        
+
         result_body_lines.append(line)
 
     result = "\n".join(result_body_lines).rstrip()
@@ -337,61 +337,65 @@ def process_footnotes(markdown: str) -> str:
 
 def generate_enriched_frontmatter(metadata: dict, content: str) -> str:
     """Generate YAML frontmatter with enhanced metadata.
-    
+
     Args:
         metadata: Source metadata (title, author, date, etc.)
         content: Extracted content body
-        
+
     Returns:
         YAML frontmatter string
     """
-    import yaml
     from datetime import datetime
-    
+
+    import yaml
+
     frontmatter = {
-        'title': metadata.get('title', 'Untitled'),
-        'author': metadata.get('author', 'Unknown'),
-        'date': metadata.get('date', datetime.now().isoformat()),
-        'source_url': metadata.get('url', ''),
-        'tags': metadata.get('tags', []),
+        "title": metadata.get("title", "Untitled"),
+        "author": metadata.get("author", "Unknown"),
+        "date": metadata.get("date", datetime.now().isoformat()),
+        "source_url": metadata.get("url", ""),
+        "tags": metadata.get("tags", []),
     }
-    
+
     # Add content metrics
-    frontmatter['word_count'] = len(content.split())
-    frontmatter['reading_time_minutes'] = max(1, frontmatter['word_count'] // 250)
-    
+    frontmatter["word_count"] = len(content.split())
+    frontmatter["reading_time_minutes"] = max(1, frontmatter["word_count"] // 250)
+
     # Add extraction metadata
-    frontmatter['extracted_at'] = datetime.now().isoformat()
-    frontmatter['extraction_quality'] = metadata.get('quality', 'unknown')
-    
-    return '---\n' + yaml.dump(frontmatter, default_flow_style=False) + '---\n'
+    frontmatter["extracted_at"] = datetime.now().isoformat()
+    frontmatter["extraction_quality"] = metadata.get("quality", "unknown")
+
+    return "---\n" + yaml.dump(frontmatter, default_flow_style=False) + "---\n"
 
 
 def extract_footnotes_from_html(html: str) -> tuple:
     """Extract footnotes from HTML structure.
-    
+
     Args:
         html: HTML content potentially containing footnotes
-        
+
     Returns:
         Tuple of (cleaned_html, footnotes_dict)
     """
-    from bs4 import BeautifulSoup
     import re
-    
-    soup = BeautifulSoup(html, 'html.parser')
+
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html, "html.parser")
     footnotes = {}
-    footnote_pattern = re.compile(r'fn(\d+)')
-    
+    footnote_pattern = re.compile(r"fn(\d+)")
+
     # Look for footnote containers (various formats)
-    for container in soup.find_all(['div', 'section'], class_=re.compile(r'footnote|note|endnote', re.I)):
-        for item in container.find_all(['li', 'p']):
+    for container in soup.find_all(
+        ["div", "section"], class_=re.compile(r"footnote|note|endnote", re.I)
+    ):
+        for item in container.find_all(["li", "p"]):
             # Extract ID
-            item_id = item.get('id', '')
+            item_id = item.get("id", "")
             match = footnote_pattern.search(item_id)
             if match:
                 fn_id = match.group(1)
                 footnotes[fn_id] = item.get_text()
                 item.decompose()
-    
+
     return str(soup), footnotes

@@ -46,9 +46,9 @@ def test_core_functionality_without_transcripts():
     transcript dependencies.
     """
     from yclib_extract.lib.youtube_transcripts import (
+        extract_podcast_url,
         extract_video_id,
         extract_youtube_url,
-        extract_podcast_url,
     )
 
     # These should work without any transcript dependencies
