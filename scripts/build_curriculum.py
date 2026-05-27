@@ -69,6 +69,18 @@ def slugify(text: str) -> str:
     return s.strip("-")
 
 
+def get_source_type(res: dict) -> str:
+    """Identify the source type of a resource based on its URL."""
+    url = (res.get("online_url") or res.get("curriculum_url") or res.get("url") or "").lower()
+    if "paulgraham.com" in url:
+        return "pg_essay"
+    if "blog.samaltman.com" in url:
+        return "sa_essay"
+    if "ycombinator.com/library" in url:
+        return "yc_library"
+    return "startup_school"
+
+
 def get_res_id(res: dict) -> str:
     """Derive unique ID for a resource based on resolved ID (with conflict resolution), title slug, or URL."""
     # 0. Prioritize already resolved ID (handles collisions)
