@@ -311,9 +311,16 @@ class ContentExtractor:
                 source_type=canonical_source_type,
             )
 
-        except Exception as e:
-            self.db.update_job_status(job_id, "error", error_msg=str(e))
+        except requests.exceptions.Timeout:
+            self.db.update_job_status(job_id, "failed", error_msg="Request timeout")
             return None
+        except requests.exceptions.HTTPError as e:
+            self.db.update_job_status(job_id, "error", error_msg=f"HTTP {e.response.status_code}")
+            return None
+        except Exception as exc:
+            self.db.update_job_status(job_id, "error", error_msg=str(exc))
+            return None
+
 
     def _format_frontmatter(self, metadata: Dict[str, Any]) -> str:
         lines = ["---"]
