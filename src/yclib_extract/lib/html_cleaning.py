@@ -209,6 +209,13 @@ def process_internal_links(
 
         # Parse the link URL
         parsed = urlparse(link_url)
+        
+        # Resolve relative links if possible
+        if not parsed.netloc and not link_url.startswith("#"):
+            # For PG essays, assume relative links are on paulgraham.com
+            if blog_domain.lower() == "paulgraham.com":
+                link_url = f"https://paulgraham.com/{link_url.lstrip('/')}"
+                parsed = urlparse(link_url)
 
         # Check if it's internal (same blog domain)
         is_internal = (
@@ -216,13 +223,18 @@ def process_internal_links(
             or parsed.netloc.lower() == f"www.{blog_domain}".lower()
         )
 
-        if is_internal and link_url in url_to_slug_map:
-            # Convert to file reference
-            slug = url_to_slug_map[link_url]
-            return f"[{link_text}](./{slug}.md)"
-        else:
-            # Keep external links or unmapped internal links as is
-            return f"[{link_text}]({link_url})"
+        if is_internal:
+            # Try to match full URL or just the path
+            clean_url = f"https://{blog_domain.lower()}/{parsed.path.lstrip('/')}"
+            if link_url in url_to_slug_map:
+                slug = url_to_slug_map[link_url]
+                return f"[{link_text}](./{slug}.md)"
+            elif clean_url in url_to_slug_map:
+                slug = url_to_slug_map[clean_url]
+                return f"[{link_text}](./{slug}.md)"
+        
+        # Keep external links or unmapped internal links as is
+        return f"[{link_text}]({link_url})"
 
     # Match markdown links: [text](url)
     pattern = r"\[([^\]]+)\]\(([^)]+)\)"
