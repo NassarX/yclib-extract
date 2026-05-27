@@ -413,6 +413,13 @@ class PipelineOrchestrator:
         if mode not in {"weekly", "dev"}:
             raise ValueError(f"Unknown mode: {mode}")
 
+        last_run = self.db.get_last_run()
+        if last_run and last_run["status"] == "error" and not replay and not force:
+            self._log(
+                f"Warning: Last run {last_run['run_id']} failed. "
+                "Consider using --replay to resume or --force to restart."
+            )
+
         force = force or replay or mode == "dev"
         run_id = datetime.now().strftime("%Y%m%d%H%M%S")
         self.db.begin_run(
