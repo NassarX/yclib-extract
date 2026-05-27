@@ -166,3 +166,51 @@ INVIDIOUS_INSTANCES={','.join(self.invidious_instances)}
             Config instance with all values from environment
         """
         return cls(load_env=load_env)
+
+
+class YCLibraryConfig:
+    """YC Library-specific configuration and extraction tracking."""
+
+    def __init__(self, base_config=None):
+        self.base_config = base_config or {}
+        self.quality_thresholds = {
+            'min_content_length': 100,
+            'target_content_length': 500,
+            'allow_short_content': False,
+        }
+        self.extraction_tracking = {
+            'track_quality': True,
+            'store_metrics': True,
+            'quality_db_path': 'artifacts/extraction_jobs.db',
+        }
+
+    def should_extract(self, metadata: dict, force=False) -> bool:
+        """Determine if resource should be extracted.
+        
+        Args:
+            metadata: Resource metadata
+            force: Force extraction even if exists
+            
+        Returns:
+            True if should extract
+        """
+        if force:
+            return True
+        
+        # Check if already extracted
+        if metadata.get('extraction_status') == 'done':
+            return False
+        
+        # Check if previously failed
+        if metadata.get('extraction_status') in ('error', 'failed'):
+            # Can retry based on config
+            return self.base_config.get('retry_failed', False)
+        
+        return True
+
+    def get_quality_config(self) -> dict:
+        """Get quality tracking configuration."""
+        return {
+            'thresholds': self.quality_thresholds,
+            'tracking': self.extraction_tracking,
+        }
