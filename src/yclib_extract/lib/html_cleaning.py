@@ -139,6 +139,8 @@ def extract_main_content(soup) -> Optional[str]:
         ("article", None),
         ("main", None),
         ("div", "content"),
+        ("div", "post"),
+        ("div", "entry"),
     ]
 
     for tag, cls in targets:
