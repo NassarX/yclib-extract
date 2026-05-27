@@ -315,3 +315,69 @@ def process_footnotes(markdown: str) -> str:
             result += f"[^{fn_num}]: {footnotes[fn_num]}\n"
 
     return result.strip()
+
+
+def process_footnotes(content: str, footnotes_map: dict = None) -> str:
+    """Process and normalize footnotes in extracted markdown.
+    
+    Handles multi-line footnotes, anchor replacements, and normalizes
+    footnote references for consistency.
+    
+    Args:
+        content: Markdown content with footnotes
+        footnotes_map: Optional mapping of footnote IDs to content
+        
+    Returns:
+        Content with processed footnotes
+    """
+    import re
+    
+    if footnotes_map is None:
+        footnotes_map = {}
+    
+    # Normalize multi-line footnotes (e.g., in Paul Graham essays)
+    # Convert [1] references to [^1] for pandoc-style footnotes
+    content = re.sub(r'\[(\d+)\]', r'[^\1]', content)
+    
+    # Append footnote definitions at end if provided
+    if footnotes_map:
+        content += '\n\n'
+        for footnote_id in sorted(footnotes_map.keys(), key=lambda x: int(x) if x.isdigit() else 0):
+            footnote_text = footnotes_map[footnote_id]
+            # Clean footnote text
+            footnote_text = footnote_text.strip()
+            if not footnote_text.endswith('.'):
+                footnote_text += '.'
+            content += f"[^{footnote_id}]: {footnote_text}\n"
+    
+    return content
+
+
+def extract_footnotes_from_html(html: str) -> tuple:
+    """Extract footnotes from HTML structure.
+    
+    Args:
+        html: HTML content potentially containing footnotes
+        
+    Returns:
+        Tuple of (cleaned_html, footnotes_dict)
+    """
+    from bs4 import BeautifulSoup
+    import re
+    
+    soup = BeautifulSoup(html, 'html.parser')
+    footnotes = {}
+    footnote_pattern = re.compile(r'fn(\d+)')
+    
+    # Look for footnote containers (various formats)
+    for container in soup.find_all(['div', 'section'], class_=re.compile(r'footnote|note|endnote', re.I)):
+        for item in container.find_all(['li', 'p']):
+            # Extract ID
+            item_id = item.get('id', '')
+            match = footnote_pattern.search(item_id)
+            if match:
+                fn_id = match.group(1)
+                footnotes[fn_id] = item.get_text()
+                item.decompose()
+    
+    return str(soup), footnotes
