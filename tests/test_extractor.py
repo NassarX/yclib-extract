@@ -274,3 +274,26 @@ def test_get_all_jobs_ordering(tmp_path):
     assert len(jobs) == 2
     assert jobs[0]["id"] == "job-new"
     assert jobs[1]["id"] == "job-old"
+
+
+def test_quality_tracking():
+    """Test quality level determination based on content length."""
+    from yclib_extract.extractor import YCLibraryExtractionEnhancer
+    
+    # Excellent (> 5000)
+    meta = {"title": "Title", "author": "Author"}
+    metrics = YCLibraryExtractionEnhancer.track_extraction_quality("a" * 6000, meta)
+    assert metrics["quality_level"] == "excellent"
+    
+    # Good (500 - 5000)
+    metrics = YCLibraryExtractionEnhancer.track_extraction_quality("a" * 1000, meta)
+    assert metrics["quality_level"] == "good"
+    
+    # Minimal (100 - 500)
+    metrics = YCLibraryExtractionEnhancer.track_extraction_quality("a" * 200, meta)
+    assert metrics["quality_level"] == "minimal"
+    
+    # Short (< 100)
+    metrics = YCLibraryExtractionEnhancer.track_extraction_quality("a" * 50, meta)
+    assert metrics["quality_level"] == "short"
+    assert "content_too_short" in metrics["warnings"]

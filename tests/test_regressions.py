@@ -254,3 +254,17 @@ def test_video_with_no_video_url_and_tiny_body_is_removed(monkeypatch, tmp_path)
 
     assert result is None
     assert extractor.db.status["post_removed"]["status"] == "removed"
+
+
+def test_internal_link_resolution_regression():
+    """Verify that relative links are resolved correctly to local files."""
+    from yclib_extract.lib.html_cleaning import process_internal_links
+    
+    markdown = "Read [this essay](best.html) for more."
+    url_to_slug = {"https://paulgraham.com/best.html": "the-best-essay"}
+    
+    # Test PG relative link
+    result = process_internal_links(
+        markdown, blog_domain="paulgraham.com", url_to_slug_map=url_to_slug
+    )
+    assert "[this essay](./the-best-essay.md)" in result
