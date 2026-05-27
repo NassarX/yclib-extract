@@ -321,12 +321,32 @@ class ContentExtractor:
             self.db.update_job_status(job_id, "error", error_msg=str(exc))
             return None
 
-    def _format_frontmatter(self, metadata: Dict[str, Any]) -> str:
-        lines = ["---"]
+    def _validate_metadata(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate and sanitize metadata for frontmatter injection."""
+        validated = {}
         for field in FRONTMATTER_FIELDS:
             value = metadata.get(field)
+            if value is None:
+                continue
+
+            # Sanitize strings to prevent frontmatter breakout
+            if isinstance(value, str):
+                # Remove triple-dashes and normalize whitespace
+                value = value.replace("---", "--").strip()
+            elif isinstance(value, list):
+                value = [str(v).replace("---", "--") for v in value]
+            
+            validated[field] = value
+        return validated
+
+    def _format_frontmatter(self, metadata: Dict[str, Any]) -> str:
+        validated = self._validate_metadata(metadata)
+        lines = ["---"]
+        for field in FRONTMATTER_FIELDS:
+            value = validated.get(field)
             if value in (None, "", [], {}):
                 continue
+            # json.dumps handles quoting and escaping special characters
             lines.append(f"{field}: {json.dumps(value)}")
         lines.append("---")
         return "\n".join(lines)
