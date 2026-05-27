@@ -277,3 +277,69 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+class AlgoliaPageinator:
+    """Enhanced pagination for large Algolia result sets."""
+
+    def __init__(self, client, app_id, api_key, index_name):
+        self.client = client
+        self.app_id = app_id
+        self.api_key = api_key
+        self.index_name = index_name
+
+    def paginate_all_results(self, query='', filters='', batch_size=1000, max_results=None):
+        """Paginate through all Algolia results efficiently.
+        
+        Args:
+            query: Search query
+            filters: Algolia filter expression
+            batch_size: Results per page
+            max_results: Stop after this many results (None = all)
+            
+        Yields:
+            Result batches
+        """
+        import requests
+        from typing import Generator, Dict, List
+        
+        params = {
+            'query': query,
+            'hitsPerPage': batch_size,
+            'page': 0,
+        }
+        
+        if filters:
+            params['filters'] = filters
+        
+        total_fetched = 0
+        
+        while True:
+            try:
+                # Make paginated request to Algolia API
+                url = f"https://{self.app_id}-dsn.algolia.net/1/indexes/{self.index_name}"
+                headers = {'X-Algolia-API-Key': self.api_key, 'X-Algolia-Application-Id': self.app_id}
+                
+                response = requests.get(url, params=params, headers=headers, timeout=10)
+                response.raise_for_status()
+                
+                data = response.json()
+                hits = data.get('hits', [])
+                
+                if not hits:
+                    break
+                
+                yield hits
+                total_fetched += len(hits)
+                
+                if max_results and total_fetched >= max_results:
+                    break
+                
+                if len(hits) < batch_size:
+                    break
+                
+                params['page'] += 1
+                
+            except Exception as e:
+                print(f"Pagination error: {e}")
+                break
