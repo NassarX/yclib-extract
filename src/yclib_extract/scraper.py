@@ -113,13 +113,16 @@ class RSSScraper:
             for entry in root.findall("atom:entry", ns):
                 title = entry.find("atom:title", ns)
                 link = entry.find("atom:link", ns)
+                published = entry.find("atom:published", ns)
                 updated = entry.find("atom:updated", ns)
+                date_node = published if published is not None else updated
+
                 if link is not None:
                     items.append(
                         {
                             "url": link.get("href"),
                             "title": title.text if title is not None else "",
-                            "date": updated.text if updated is not None else "",
+                            "date": date_node.text if date_node is not None else "",
                         }
                     )
 

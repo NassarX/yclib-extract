@@ -160,6 +160,8 @@ def extract_main_content(soup) -> Optional[str]:
 def extract_page_metadata(soup) -> Dict[str, str]:
     """Extract additional metadata from the page, like created_at."""
     meta = {}
+
+    # Check for YC Library data-page payload
     data_page = soup.find(attrs={"data-page": True})
     if data_page:
         raw_payload = data_page.get("data-page") or ""
@@ -171,6 +173,19 @@ def extract_page_metadata(soup) -> Dict[str, str]:
                 meta["published_at"] = created_at.split("T")[0]
         except (TypeError, ValueError, json.JSONDecodeError):
             pass
+
+    # Check for Posthaven formatted date (Sam Altman blog)
+    if not meta.get("published_at"):
+        date_span = soup.find("span", class_="posthaven-formatted-date")
+        if date_span and date_span.has_attr("data-unix-time"):
+            try:
+                unix_time = int(date_span["data-unix-time"])
+                from datetime import datetime
+
+                meta["published_at"] = datetime.fromtimestamp(unix_time).strftime("%Y-%m-%d")
+            except (ValueError, TypeError):
+                pass
+
     return meta
 
 
