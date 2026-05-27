@@ -141,3 +141,15 @@ def test_extract_pg_dates_and_clean():
     cleaned, pub, rev = extract_pg_dates_and_clean("No date here")
     assert pub is None
     assert rev is None
+
+
+import pytest
+
+from yclib_extract.lib.html_cleaning import html_to_markdown
+
+
+def test_html_to_markdown_removes_nbsp():
+    html = "<p>Hello&nbsp;World\xa0This is a test.</p>"
+    md = html_to_markdown(html)
+    assert "\xa0" not in md
+    assert "Hello World This is a test." in md
