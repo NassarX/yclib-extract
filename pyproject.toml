@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yclib-extract"
+version = "0.1.0"
+description = "Discover and extract content from Y Combinator Library (articles, videos, podcasts) with resilient transcript fallbacks."
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [{name = "Mahmoud Nassar"}]
+keywords = ["yc", "y-combinator", "scraping", "extraction", "content"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Internet :: WWW/HTTP",
+]
+dependencies = [
+    "requests>=2.31.0",
+    "PySocks>=1.7.1",
+    "beautifulsoup4>=4.12.0",
+    "trafilatura>=1.6.0",
+]
+
+[project.optional-dependencies]
+transcripts = ["youtube-transcript-api>=0.6.0"]
+transcripts-full = ["youtube-transcript-api>=0.6.0", "yt-dlp>=2023.12.0"]
+dev = ["pytest>=7.0", "black>=23.0", "isort>=5.12", "flake8>=6.0", "mypy>=1.0", "PyYAML>=6.0"]
+playwright = ["playwright>=1.40.0"]
+yaml = ["PyYAML>=6.0"]
+
+[project.scripts]
+yclib-extract = "yclib_extract.cli:main"
+yclib-scrape = "yclib_extract.scraper:main"
+yclib-get = "yclib_extract.extractor:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39", "py310", "py311", "py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+ignore_missing_imports = true
