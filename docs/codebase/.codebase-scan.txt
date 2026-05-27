@@ -1,0 +1,399 @@
+
+=== DIRECTORY TREE (max depth 3, source files only) ===
+.agents
+.agents/skills
+.agents/skills/ai-prompt-engineering-safety-review
+.agents/skills/ai-prompt-engineering-safety-review/SKILL.md
+.agents/skills/ai-ready
+.agents/skills/ai-ready/SKILL.md
+.claude
+.claude/skills
+.claude/skills/ai-prompt-engineering-safety-review
+.claude/skills/ai-prompt-engineering-safety-review/SKILL.md
+.claude/skills/ai-ready
+.claude/skills/ai-ready/SKILL.md
+.env
+.env.example
+.github
+.github/copilot-instructions.md
+.github/workflows
+.github/workflows/ci.yml
+.gitignore
+.idea
+.idea/.gitignore
+.idea/csv-editor.xml
+.idea/dataSources
+.idea/dataSources/b3a26094-8904-4c2e-ab05-d5986559b40c
+.idea/dataSources/b3a26094-8904-4c2e-ab05-d5986559b40c/storage_v2
+.idea/dataSources/b3a26094-8904-4c2e-ab05-d5986559b40c.xml
+.idea/dataSources/data_sources_history.xml
+.idea/dataSources.local.xml
+.idea/dataSources.xml
+.idea/inspectionProfiles
+.idea/inspectionProfiles/Project_Default.xml
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/material_theme_project_new.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/pyProjectModel.xml
+.idea/vcs.xml
+.idea/workspace.xml
+.idea/yclib-extract.iml
+.kiro
+.kiro/skills
+.kiro/skills/ai-ready
+.kiro/skills/ai-ready/SKILL.md
+.playwright-mcp
+.playwright-mcp/console-2026-05-25T12-02-34-240Z.log
+.playwright-mcp/console-2026-05-25T16-29-19-955Z.log
+.playwright-mcp/console-2026-05-25T16-39-44-404Z.log
+.playwright-mcp/console-2026-05-25T16-39-51-991Z.log
+.playwright-mcp/page-2026-05-25T12-02-37-712Z.yml
+.remember
+.remember/.gitignore
+.remember/logs
+.remember/logs/autonomous
+.remember/logs/hook-errors.log
+.remember/logs/memory-2026-05-26.log
+.remember/logs/memory-2026-05-27.log
+.remember/tmp
+CONTEXT.md
+GEMINI.md
+LICENSE
+README.md
+RELEASE_NOTES_v0.1.0.md
+artifacts
+artifacts/altman_essays
+artifacts/altman_essays/2279512.md
+artifacts/altman_essays/a-clarification.md
+artifacts/altman_essays/abundant-intelligence.md
+artifacts/altman_essays/dall-star-e-2.md
+artifacts/altman_essays/dalle-2.md
+artifacts/altman_essays/e-pur-si-muove.md
+artifacts/altman_essays/file.md
+artifacts/altman_essays/funding-for-covid-19-projects.md
+artifacts/altman_essays/gpt-4o.md
+artifacts/altman_essays/hard-startups.md
+artifacts/altman_essays/helion-needs-you.md
+artifacts/altman_essays/helion.md
+artifacts/altman_essays/how-to-be-successful.md
+artifacts/altman_essays/how-to-invest-in-startups.md
+artifacts/altman_essays/idea-generation.md
+artifacts/altman_essays/jakub-and-szymon.md
+artifacts/altman_essays/pg-and-jessica.md
+artifacts/altman_essays/please-fund-more-science.md
+artifacts/altman_essays/productivity.md
+artifacts/altman_essays/project-covalence.md
+artifacts/altman_essays/reflections.md
+artifacts/altman_essays/reinforcement-learning-progress.md
+artifacts/altman_essays/researchers-and-founders.md
+artifacts/altman_essays/sora-2.md
+artifacts/altman_essays/sora-update-1.md
+artifacts/altman_essays/sora-update-number-1.md
+artifacts/altman_essays/the-gentle-singularity.md
+artifacts/altman_essays/the-merge.md
+artifacts/altman_essays/the-strength-of-being-misunderstood.md
+artifacts/altman_essays/the-virus.md
+artifacts/altman_essays/three-observations.md
+artifacts/altman_essays/us-digital-currency.md
+artifacts/altman_essays/what-i-wish-someone-had-told-me.md
+artifacts/extraction_jobs.db
+artifacts/metadata
+artifacts/metadata/altman_essays_metadata.json
+artifacts/metadata/pg_essays_metadata.json
+artifacts/metadata/yc_library_metadata.json
+artifacts/metadata/yc_startup_school_metadata.json
+artifacts/pg_essays
+artifacts/pg_essays/6-631-372.md
+artifacts/pg_essays/a-fundraising-survival-guide.md
+artifacts/pg_essays/a-local-revolution.md
+artifacts/pg_essays/a-new-venture-animal.md
+artifacts/pg_essays/a-plan-for-spam.md
+artifacts/pg_essays/a-project-of-ones-own.md
+artifacts/pg_essays/a-students-guide-to-startups.md
+artifacts/pg_essays/a-unified-theory-of-vc-suckage.md
+artifacts/pg_essays/a-version-1-0.md
+artifacts/pg_essays/a-way-to-detect-bias.md
+artifacts/pg_essays/a-word-to-the-resourceful.md
+artifacts/pg_essays/after-credentials.md
+artifacts/pg_essays/after-the-ladder.md
+artifacts/pg_essays/alien-truth.md
+artifacts/pg_essays/an-alternative-theory-of-unions.md
+artifacts/pg_essays/an-nft-that-saves-lives.md
+artifacts/pg_essays/apples-mistake.md
+artifacts/pg_essays/are-software-patents-evil.md
+artifacts/pg_essays/be-good.md
+artifacts/pg_essays/before-the-startup.md
+artifacts/pg_essays/being-a-noob.md
+artifacts/pg_essays/being-popular.md
+artifacts/pg_essays/better-bayesian-filtering.md
+artifacts/pg_essays/beyond-smart.md
+artifacts/pg_essays/billionaires-build.md
+artifacts/pg_essays/black-swan-farming.md
+artifacts/pg_essays/bradleys-ghost.md
+artifacts/pg_essays/can-you-buy-a-silicon-valley-maybe.md
+artifacts/pg_essays/change-your-name.md
+artifacts/pg_essays/charisma-power.md
+artifacts/pg_essays/cities-and-ambition.md
+artifacts/pg_essays/copy-what-you-like.md
+artifacts/pg_essays/coronavirus-and-credibility.md
+artifacts/pg_essays/could-vc-be-a-casualty-of-the-recession.md
+artifacts/pg_essays/crazy-new-ideas.md
+artifacts/pg_essays/default-alive-or-default-dead.md
+artifacts/pg_essays/defining-property.md
+artifacts/pg_essays/design-and-research.md
+artifacts/pg_essays/disconnecting-distraction.md
+artifacts/pg_essays/do-things-that-dont-scale.md
+artifacts/pg_essays/donate-unrestricted.md
+artifacts/pg_essays/dont-talk-to-corp-dev.md
+artifacts/pg_essays/early-work.md
+artifacts/pg_essays/earnestness.md
+artifacts/pg_essays/economic-inequality.md
+artifacts/pg_essays/fashionable-problems.md
+artifacts/pg_essays/fierce-nerds.md
+artifacts/pg_essays/filters-that-fight-back.md
+artifacts/pg_essays/five-founders.md
+artifacts/pg_essays/five-questions-about-language-design.md
+artifacts/pg_essays/founder-control.md
+artifacts/pg_essays/founder-mode.md
+artifacts/pg_essays/frighteningly-ambitious-startup-ideas.md
+artifacts/pg_essays/general-and-surprising.md
+artifacts/pg_essays/good-and-bad-procrastination.md
+artifacts/pg_essays/good-writing.md
+artifacts/pg_essays/great-hackers.md
+artifacts/pg_essays/hackers-and-painters.md
+artifacts/pg_essays/haters.md
+artifacts/pg_essays/having-kids.md
+artifacts/pg_essays/heresy.md
+artifacts/pg_essays/high-resolution-fundraising.md
+artifacts/pg_essays/hiring-is-obsolete.md
+artifacts/pg_essays/holding-a-program-in-ones-head.md
+artifacts/pg_essays/how-art-can-be-good.md
+artifacts/pg_essays/how-not-to-die.md
+artifacts/pg_essays/how-people-get-rich-now.md
+artifacts/pg_essays/how-to-be-an-angel-investor.md
+artifacts/pg_essays/how-to-be-an-expert-in-a-changing-world.md
+artifacts/pg_essays/how-to-be-silicon-valley.md
+artifacts/pg_essays/how-to-convert-between-wealth-and-income-tax.md
+artifacts/pg_essays/how-to-convince-investors.md
+artifacts/pg_essays/how-to-disagree.md
+artifacts/pg_essays/how-to-do-great-work.md
+artifacts/pg_essays/how-to-do-philosophy.md
+artifacts/pg_essays/how-to-do-what-you-love.md
+artifacts/pg_essays/how-to-fund-a-startup.md
+artifacts/pg_essays/how-to-get-new-ideas.md
+artifacts/pg_essays/how-to-get-startup-ideas.md
+artifacts/pg_essays/how-to-lose-time-and-money.md
+artifacts/pg_essays/how-to-make-pittsburgh-a-startup-hub.md
+artifacts/pg_essays/how-to-make-wealth.md
+artifacts/pg_essays/how-to-present-to-investors.md
+artifacts/pg_essays/how-to-raise-money.md
+artifacts/pg_essays/how-to-start-a-startup.md
+artifacts/pg_essays/how-to-start-google.md
+artifacts/pg_essays/how-to-think-for-yourself.md
+artifacts/pg_essays/how-to-work-hard.md
+artifacts/pg_essays/how-to-write-usefully.md
+artifacts/pg_essays/how-y-combinator-started.md
+artifacts/pg_essays/how-you-know.md
+artifacts/pg_essays/ideas-for-startups.md
+artifacts/pg_essays/if-lisp-is-so-great.md
+artifacts/pg_essays/inequality-and-risk.md
+artifacts/pg_essays/investor-herd-dynamics.md
+artifacts/pg_essays/is-it-worth-being-wise.md
+
+=== STACK DETECTION (manifest files) ===
+
+--- pyproject.toml ---
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yclib-extract"
+version = "0.1.0"
+description = "Discover and extract content from Y Combinator Library (articles, videos, podcasts) with resilient transcript fallbacks."
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [{name = "Mahmoud Nassar"}]
+keywords = ["yc", "y-combinator", "scraping", "extraction", "content"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Internet :: WWW/HTTP",
+]
+dependencies = [
+    "requests>=2.31.0",
+    "PySocks>=1.7.1",
+    "beautifulsoup4>=4.12.0",
+    "trafilatura>=1.6.0",
+]
+
+[project.optional-dependencies]
+transcripts = ["youtube-transcript-api>=0.6.0"]
+transcripts-full = ["youtube-transcript-api>=0.6.0", "yt-dlp>=2023.12.0"]
+dev = ["pytest>=7.0", "black>=23.0", "isort>=5.12", "flake8>=6.0", "PyYAML>=6.0"]
+playwright = ["playwright>=1.40.0"]
+yaml = ["PyYAML>=6.0"]
+
+[project.scripts]
+yclib-extract = "yclib_extract.cli:main"
+yclib-scrape = "yclib_extract.scraper:main"
+yclib-get = "yclib_extract.extractor:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39", "py310", "py311", "py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+
+=== ENTRY POINTS ===
+No common entry points found. Check 'main' or 'scripts.start' in manifest files above.
+
+=== LINTING AND FORMATTING CONFIG ===
+No linting or formatting config files found in project root.
+
+=== ENVIRONMENT VARIABLE TEMPLATES ===
+--- .env.example ---
+# yclib-extract Environment Configuration
+# Copy this file to .env and update values for your environment
+
+# =============================================================================
+# ALGOLIA CONFIGURATION (YC Library Discovery)
+# =============================================================================
+
+# Algolia Application ID for YC Library API access
+# Default: 45BWZJ1SGC (public key)
+ALGOLIA_APP_ID=45BWZJ1SGC
+
+# Algolia API Key for YC Library API access
+# Default: Public analytics key (limited permissions)
+# To get credentials manually:
+# 1. Open https://www.ycombinator.com/library/search in Chrome
+# 2. Open DevTools (F12) → Network tab → filter by "algolia"
+# 3. Click any search/browse request → Headers → copy X-Algolia-API-Key
+ALGOLIA_API_KEY=MDlkNDAyNzM1YjA2YTQwYjBkMGIwNjk2Mzg4NDQ3ZGRkMTdhZWJmODM0MDdiNDVhMTNlNDRiYzFlOGZiMGI5MmFuYWx5dGljc1RhZ3M9eWNkYyUyQ2xpYnJhcnkmcmVzdHJpY3RJbmRpY2VzPUxpYnJhcnlfYm9va2ZhY2VfcHJvZHVjdGlvbiZ0YWdGaWx0ZXJzPSU1QiUyMnljZGNfcHVibGljJTIyJTJDJTVCJTIya2Jfcm9vdF8xNzYlMjIlMkMlMjJrYl9yb290XzkxMiUyMiU1RCU1RA==
+
+# Algolia Index Name for YC Library
+# Default: Library_bookface_production
+ALGOLIA_INDEX=Library_bookface_production
+
+# =============================================================================
+# OUTPUT DIRECTORIES
+# =============================================================================
+
+# Directory for YC Library extracted content (Markdown files)
+# Default: artifacts/yc_library
+CONTENT_DIR=artifacts/yc_library
+
+# Directory for Paul Graham essays
+# Default: artifacts/pg_essays
+PG_ESSAYS_DIR=artifacts/pg_essays
+
+# Directory for Sam Altman essays
+# Default: artifacts/altman_essays
+ALTMAN_ESSAYS_DIR=artifacts/altman_essays
+
+# =============================================================================
+# CONTENT EXTRACTION SETTINGS
+# =============================================================================
+
+# Minimum content length for extracted pages (in characters)
+# Default: 2000 (production), 700 (development)
+# Set lower for development to accept shorter extracted pages
+YCLIB_EXTRACT_MIN_CONTENT_LENGTH=700
+
+# =============================================================================
+# YOUTUBE TRANSCRIPT SETTINGS
+# =============================================================================
+
+# Invidious instances for YouTube transcript fallback (comma-separated)
+# Used when official YouTube API is blocked or unavailable
+# Default: yewtu.cafe,invidio.us
+INVIDIOUS_INSTANCES=yewtu.cafe,invidio.us
+
+# YouTube transcript proxy URL (all protocols)
+# Optional: Set if direct YouTube requests are blocked
+YOUTUBE_PROXY_URL=
+
+# YouTube HTTP proxy URL
+# Optional: Set if direct YouTube HTTP requests are blocked
+YOUTUBE_HTTP_PROXY_URL=
+
+# YouTube HTTPS proxy URL
+# Optional: Set if direct YouTube HTTPS requests are blocked
+YOUTUBE_HTTPS_PROXY_URL=
+
+# =============================================================================
+# GENERAL PROXY SETTINGS (Fallback for all HTTP/HTTPS requests)
+# =============================================================================
+
+# HTTP proxy URL (used as fallback for all HTTP requests)
+# Example: http://proxy.example.com:8080
+HTTP_PROXY=
+
+# HTTPS proxy URL (used as fallback for all HTTPS requests)
+# Example: http://proxy.example.com:8080
+HTTPS_PROXY=
+
+[TRUNCATED] Showing first 80 of 84 lines.
+
+=== TODO / FIXME / HACK (production code only, test dirs excluded) ===
+None found.
+
+=== GIT RECENT COMMITS (last 20) ===
+4374bd4 chore: initial commit with project skeleton and documentation
+
+=== HIGH-CHURN FILES (last 90 days, top 20) ===
+   1 .github/copilot-instructions.md
+   1 .gitignore
+   1 CONTEXT.md
+   1 GEMINI.md
+   1 README.md
+
+=== MONOREPO SIGNALS ===
+No monorepo signals detected.
+
+=== CODE METRICS ===
+Total files scanned: 802
+Total lines of code: 23886
+
+Files by language:
+  Other: 775
+  Python: 27
+
+Top 10 largest files:
+artifacts/extraction_jobs.db: 520.0KB
+artifacts/metadata/yc_library_metadata.json: 337.6KB
+artifacts/resources_audit.csv: 184.2KB
+artifacts/yc_library/product-and-design-process-for-remote-teams.md: 146.0KB
+tests/fixtures/live_office_hours.html: 133.6KB
+artifacts/yc_library/on-starting-and-scaling-one-of-the-biggest-ios-apps.md: 132.3KB
+artifacts/yc_library/on-raising-seed-and-series-a-as-a-woman-founder.md: 126.4KB
+scrape_runs/yc_content_runs_20260527.json: 124.0KB
+artifacts/yc_library/on-starting-and-scaling-bloom-institute-of-technology.md: 114.2KB
+scrape_runs/yc_content_runs_20260526.json: 114.1KB
+
+=== CI/CD PIPELINES ===
+CI/CD: GitHub Actions
+
+=== CONTAINERS & ORCHESTRATION ===
+No containerization configs detected.
+
+=== SECURITY & COMPLIANCE ===
+No security configs detected.
+
+=== PERFORMANCE & TESTING ===
+No performance testing configs detected.
+
+=== SCAN COMPLETE ===
