@@ -9,13 +9,13 @@ Refactored logic:
 """
 
 import argparse
-import sys
 import json
-import shutil
 import os
-import tempfile
-import subprocess
 import re
+import shutil
+import subprocess
+import sys
+import tempfile
 from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import urlparse
@@ -107,7 +107,8 @@ def get_res_id(res: dict) -> str:
     if online_url:
         parsed = urlparse(online_url)
         slug = parsed.path.strip("/").replace(".html", "")
-        if slug: return slug
+        if slug:
+            return slug
 
     return "resource"
 
@@ -125,15 +126,15 @@ def load_metadata_maps(artifacts_dir: Path):
     """Load URL -> local_path maps from consolidated metadata files."""
     metadata_dir = artifacts_dir / "metadata"
     combined_map = {}
-    
+
     # Files to scan
     meta_files = [
         ("pg_essays_metadata.json", "pg_essay"),
         ("altman_essays_metadata.json", "sa_essay"),
         ("yc_library_metadata.json", "yc_library"),
-        ("yc_startup_school_metadata.json", "startup_school")
+        ("yc_startup_school_metadata.json", "startup_school"),
     ]
-    
+
     for filename, source_type in meta_files:
         path = metadata_dir / filename
         if not path.exists():
@@ -148,16 +149,16 @@ def load_metadata_maps(artifacts_dir: Path):
                     val = p.get(key)
                     if val and isinstance(val, str):
                         item_urls.add(val)
-                
+
                 if not item_urls:
                     continue
 
                 local_path = p.get("local_path") or p.get("file")
                 status = p.get("status") or "done"
-                
+
                 if status not in ("done", "fetched", "skipped_existing"):
                     continue
-                
+
                 # Resolve full path to the .md file
                 if local_path:
                     p_obj = Path(local_path)
@@ -171,7 +172,7 @@ def load_metadata_maps(artifacts_dir: Path):
                             p_obj = artifacts_dir / "yc_library" / p_obj.name
                         elif source_type == "startup_school":
                             p_obj = artifacts_dir / "yc_startup_school" / p_obj.name
-                    
+
                     if p_obj.exists():
                         for url in item_urls:
                             combined_map[url] = p_obj
@@ -217,7 +218,9 @@ def to_metadata_json(res: dict, res_id: str) -> dict:
     return meta
 
 
-def run_extractor_on(metadata_dir: Path, output_dir: Path, workers: int = 1, force: bool = False) -> int:
+def run_extractor_on(
+    metadata_dir: Path, output_dir: Path, workers: int = 1, force: bool = False
+) -> int:
     """Invoke the project's extractor CLI."""
     cmd = [
         sys.executable,
@@ -305,10 +308,7 @@ def build_markdown(config: dict, yc_startup_dir: Path) -> str:
     total_resources = sum(len(m.get("resources", [])) for m in modules)
 
     local_count = sum(
-        1
-        for m in modules
-        for r in m.get("resources", [])
-        if local_exists_for(r, yc_startup_dir)
+        1 for m in modules for r in m.get("resources", []) if local_exists_for(r, yc_startup_dir)
     )
     missing_count = total_resources - local_count
 
@@ -320,7 +320,9 @@ def build_markdown(config: dict, yc_startup_dir: Path) -> str:
         f"> {local_count}/{total_resources} resources available locally · "
         f"{missing_count} online-only  "
     )
-    lines.append(f"> Source: [startupschool.org/curriculum](https://www.startupschool.org/curriculum)  ")
+    lines.append(
+        f"> Source: [startupschool.org/curriculum](https://www.startupschool.org/curriculum)  "
+    )
     lines.append(f"> Generated: {date.today()}")
     lines.append("")
     lines.append(
@@ -378,18 +380,22 @@ def main():
     artifacts_dir = Path(args.artifacts_dir)
     yc_startup_dir = artifacts_dir / "yc_startup_school"
     yc_startup_dir.mkdir(parents=True, exist_ok=True)
-    
+
     config = load_config(Path(args.config))
     modules = config.get("modules", [])
 
     if args.inject_only:
-        target_path = Path(args.inject_metadata_dir) if args.inject_metadata_dir else artifacts_dir / "metadata" / "yc_startup_school_metadata.json"
+        target_path = (
+            Path(args.inject_metadata_dir)
+            if args.inject_metadata_dir
+            else artifacts_dir / "metadata" / "yc_startup_school_metadata.json"
+        )
         posts = []
         for mod in modules:
             for res in mod.get("resources", []):
                 res_id = get_res_id(res)
                 posts.append(to_metadata_json(res, res_id))
-        
+
         target_path.parent.mkdir(parents=True, exist_ok=True)
         with open(target_path, "w", encoding="utf-8") as f:
             json.dump({"posts": posts}, f, indent=2)
@@ -401,14 +407,17 @@ def main():
     for mod in modules:
         for res in mod.get("resources", []):
             res_id = get_res_id(res)
-            url = (res.get("online_url") or res.get("curriculum_url") or res.get("url") or "")
+            url = res.get("online_url") or res.get("curriculum_url") or res.get("url") or ""
             filename = f"{res_id}.md"
             if filename in standalone_files and standalone_files[filename] != url:
                 stype = get_source_type(res)
                 suffix = "ss"
-                if stype == "pg_essay": suffix = "pg"
-                elif stype == "sa_essay": suffix = "sa"
-                elif stype == "yc_library": suffix = "yc"
+                if stype == "pg_essay":
+                    suffix = "pg"
+                elif stype == "sa_essay":
+                    suffix = "sa"
+                elif stype == "yc_library":
+                    suffix = "yc"
                 res_id = f"{res_id}-{suffix}"
                 filename = f"{res_id}.md"
                 if filename in standalone_files and standalone_files[filename] != url:
@@ -420,10 +429,10 @@ def main():
     if args.ensure_local:
         meta_map = load_metadata_maps(artifacts_dir)
         to_extract = []
-        
+
         # Track which files are "current" in the curriculum
         current_files = {"startup_school_curriculum.md"}
-        
+
         for mod in modules:
             for res in mod.get("resources", []):
                 res_id = res["resolved_id"]
@@ -432,7 +441,7 @@ def main():
 
                 if local_exists_for(res, yc_startup_dir) and not args.force:
                     continue
-                
+
                 urls = get_all_urls(res)
                 found_src = None
 
@@ -441,7 +450,7 @@ def main():
                     if u in meta_map:
                         found_src = meta_map[u]
                         break
-                
+
                 if found_src and found_src.exists():
                     dest_path = yc_startup_dir / filename
                     if found_src.resolve() != dest_path.resolve():
@@ -453,7 +462,7 @@ def main():
 
                 # Otherwise add to extraction queue
                 to_extract.append(res)
-        
+
         if to_extract:
             print(f"🔁 ensure-local: {len(to_extract)} resources to extract")
             tmpdir = Path(tempfile.mkdtemp(prefix="yc_curric_meta_"))
@@ -463,7 +472,7 @@ def main():
                     meta = to_metadata_json(res, res_id)
                     with open(tmpdir / f"{res_id}.json", "w", encoding="utf-8") as f:
                         json.dump(meta, f, indent=2)
-                
+
                 workers = int(os.environ.get("YCLIB_EXTRACTOR_WORKERS", "4"))
                 run_extractor_on(tmpdir, yc_startup_dir, workers=workers, force=args.force)
             finally:
@@ -478,7 +487,7 @@ def main():
 
     print(f"🔨 Building curriculum Markdown...")
     markdown = build_markdown(config, yc_startup_dir)
-    
+
     out_path = yc_startup_dir / "startup_school_curriculum.md"
     out_path.write_text(markdown, encoding="utf-8")
     print(f"✅ Written: {out_path}")

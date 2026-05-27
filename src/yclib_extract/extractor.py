@@ -1,9 +1,9 @@
-import json
-import sqlite3
 import contextlib
+import json
 import re
-from dataclasses import dataclass
+import sqlite3
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -321,7 +321,6 @@ class ContentExtractor:
             self.db.update_job_status(job_id, "error", error_msg=str(exc))
             return None
 
-
     def _format_frontmatter(self, metadata: Dict[str, Any]) -> str:
         lines = ["---"]
         for field in FRONTMATTER_FIELDS:
@@ -521,70 +520,70 @@ class YCLibraryExtractionEnhancer:
     """Enhanced extraction for YC Library content with quality tracking."""
 
     QUALITY_METRICS = {
-        'content_length': {'min': 100, 'target': 500},
-        'title_present': True,
-        'author_present': True,
-        'has_transcript': False,  # Optional
-        'extraction_time': None,
+        "content_length": {"min": 100, "target": 500},
+        "title_present": True,
+        "author_present": True,
+        "has_transcript": False,  # Optional
+        "extraction_time": None,
     }
 
     @staticmethod
     def track_extraction_quality(content: str, metadata: dict) -> dict:
         """Track extraction quality metrics.
-        
+
         Args:
             content: Extracted markdown content
             metadata: Source metadata
-            
+
         Returns:
             Quality metrics dict
         """
         import time
-        
+
         metrics = {
-            'content_length': len(content),
-            'title_present': bool(metadata.get('title')),
-            'author_present': bool(metadata.get('author')),
-            'has_transcript': 'transcript' in content.lower(),
-            'word_count': len(content.split()),
-            'quality_level': 'unknown',
-            'warnings': [],
+            "content_length": len(content),
+            "title_present": bool(metadata.get("title")),
+            "author_present": bool(metadata.get("author")),
+            "has_transcript": "transcript" in content.lower(),
+            "word_count": len(content.split()),
+            "quality_level": "unknown",
+            "warnings": [],
         }
-        
+
         # Determine quality level
-        if metrics['content_length'] < 100:
-            metrics['quality_level'] = 'short'
-            metrics['warnings'].append('content_too_short')
-        elif metrics['content_length'] < 500:
-            metrics['quality_level'] = 'minimal'
-        elif metrics['content_length'] < 5000:
-            metrics['quality_level'] = 'good'
+        if metrics["content_length"] < 100:
+            metrics["quality_level"] = "short"
+            metrics["warnings"].append("content_too_short")
+        elif metrics["content_length"] < 500:
+            metrics["quality_level"] = "minimal"
+        elif metrics["content_length"] < 5000:
+            metrics["quality_level"] = "good"
         else:
-            metrics['quality_level'] = 'excellent'
-        
+            metrics["quality_level"] = "excellent"
+
         # Check for completeness
-        if not metrics['title_present']:
-            metrics['warnings'].append('missing_title')
-        if not metrics['author_present']:
-            metrics['warnings'].append('missing_author')
-        
+        if not metrics["title_present"]:
+            metrics["warnings"].append("missing_title")
+        if not metrics["author_present"]:
+            metrics["warnings"].append("missing_author")
+
         return metrics
 
     @staticmethod
     def enrich_with_quality_markers(markdown: str, quality_metrics: dict) -> str:
         """Add quality markers to extracted content.
-        
+
         Args:
             markdown: Extracted markdown
             quality_metrics: Quality metrics from tracking
-            
+
         Returns:
             Enriched markdown with quality context
         """
         # Add quality marker comment at top
         quality_comment = f"<!-- extraction_quality: {quality_metrics['quality_level']} -->\n"
-        
-        if quality_metrics['warnings']:
+
+        if quality_metrics["warnings"]:
             quality_comment += f"<!-- warnings: {', '.join(quality_metrics['warnings'])} -->\n"
-        
+
         return quality_comment + markdown

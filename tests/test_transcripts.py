@@ -1,6 +1,5 @@
 import sys
-from types import ModuleType
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 
 from yclib_extract.lib.youtube_transcripts import (
     _parse_caption_payload,

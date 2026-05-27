@@ -1,12 +1,12 @@
 import json
 import os
 import re
-from urllib.parse import urlencode
+import unicodedata
 from pathlib import Path
 from typing import Dict, List, Optional
+from urllib.parse import urlencode
 
 import requests
-import unicodedata
 
 from .config import Config
 
@@ -94,18 +94,19 @@ class RSSScraper:
 
     def fetch_items(self) -> List[Dict[str, str]]:
         """Fetch and parse feed items.
-        
+
         Returns:
             List of dicts with 'url', 'title', and 'date'
         """
         try:
             response = requests.get(self.feed_url, timeout=20)
             response.raise_for_status()
-            
+
             # Simple XML parsing for RSS/Atom
             import xml.etree.ElementTree as ET
+
             root = ET.fromstring(response.content)
-            
+
             items = []
             # Try Atom format (Altman)
             ns = {"atom": "http://www.w3.org/2005/Atom"}
@@ -114,12 +115,14 @@ class RSSScraper:
                 link = entry.find("atom:link", ns)
                 updated = entry.find("atom:updated", ns)
                 if link is not None:
-                    items.append({
-                        "url": link.get("href"),
-                        "title": title.text if title is not None else "",
-                        "date": updated.text if updated is not None else ""
-                    })
-            
+                    items.append(
+                        {
+                            "url": link.get("href"),
+                            "title": title.text if title is not None else "",
+                            "date": updated.text if updated is not None else "",
+                        }
+                    )
+
             if items:
                 return items
 
@@ -129,12 +132,14 @@ class RSSScraper:
                 link = item.find("link")
                 pub_date = item.find("pubDate")
                 if link is not None:
-                    items.append({
-                        "url": link.text,
-                        "title": title.text if title is not None else "",
-                        "date": pub_date.text if pub_date is not None else ""
-                    })
-            
+                    items.append(
+                        {
+                            "url": link.text,
+                            "title": title.text if title is not None else "",
+                            "date": pub_date.text if pub_date is not None else "",
+                        }
+                    )
+
             return items
         except Exception as e:
             print(f"Error fetching RSS feed {self.feed_url}: {e}")
@@ -343,58 +348,62 @@ class AlgoliaPageinator:
         self.api_key = api_key
         self.index_name = index_name
 
-    def paginate_all_results(self, query='', filters='', batch_size=1000, max_results=None):
+    def paginate_all_results(self, query="", filters="", batch_size=1000, max_results=None):
         """Paginate through all Algolia results efficiently.
-        
+
         Args:
             query: Search query
             filters: Algolia filter expression
             batch_size: Results per page
             max_results: Stop after this many results (None = all)
-            
+
         Yields:
             Result batches
         """
+        from typing import Dict, Generator, List
+
         import requests
-        from typing import Generator, Dict, List
-        
+
         params = {
-            'query': query,
-            'hitsPerPage': batch_size,
-            'page': 0,
+            "query": query,
+            "hitsPerPage": batch_size,
+            "page": 0,
         }
-        
+
         if filters:
-            params['filters'] = filters
-        
+            params["filters"] = filters
+
         total_fetched = 0
-        
+
         while True:
             try:
                 # Make paginated request to Algolia API
                 url = f"https://{self.app_id}-dsn.algolia.net/1/indexes/{self.index_name}"
-                headers = {'X-Algolia-API-Key': self.api_key, 'X-Algolia-Application-Id': self.app_id}
-                
+                headers = {
+                    "X-Algolia-API-Key": self.api_key,
+                    "X-Algolia-Application-Id": self.app_id,
+                }
+
                 response = requests.get(url, params=params, headers=headers, timeout=10)
                 response.raise_for_status()
-                
+
                 data = response.json()
-                hits = data.get('hits', [])
-                
+                hits = data.get("hits", [])
+
                 if not hits:
                     break
-                
+
                 yield hits
                 total_fetched += len(hits)
-                
+
                 if max_results and total_fetched >= max_results:
                     break
-                
+
                 if len(hits) < batch_size:
                     break
-                
-                params['page'] += 1
-                
+
+                params["page"] += 1
+
             except Exception as e:
                 print(f"Pagination error: {e}")
                 break
@@ -404,13 +413,13 @@ class MetadataFilter:
     """Filtering and deduplication for YC Library metadata."""
 
     @staticmethod
-    def filter_duplicates(metadata_list: list, key_field='url') -> list:
+    def filter_duplicates(metadata_list: list, key_field="url") -> list:
         """Remove duplicate entries by canonical key.
-        
+
         Args:
             metadata_list: List of metadata dicts
             key_field: Field to use as deduplication key
-            
+
         Returns:
             Deduplicated list preserving order
         """
@@ -426,11 +435,11 @@ class MetadataFilter:
     @staticmethod
     def filter_by_criteria(metadata_list: list, criteria: dict) -> list:
         """Filter metadata by multiple criteria.
-        
+
         Args:
             metadata_list: List of metadata dicts
             criteria: Dict of {field: value_or_list}
-            
+
         Returns:
             Filtered list
         """
@@ -453,33 +462,33 @@ class MetadataFilter:
     @staticmethod
     def enrich_metadata(item: dict) -> dict:
         """Add computed fields to metadata.
-        
+
         Args:
             item: Metadata dict
-            
+
         Returns:
             Enriched metadata
         """
         enriched = item.copy()
-        
+
         # Add content type detection
-        if 'media_url' in enriched and enriched['media_url']:
-            if 'youtube.com' in enriched['media_url'] or 'youtu.be' in enriched['media_url']:
-                enriched['content_type'] = 'video'
-            elif enriched['media_url'].endswith(('.pdf', '.epub')):
-                enriched['content_type'] = 'document'
-        
+        if "media_url" in enriched and enriched["media_url"]:
+            if "youtube.com" in enriched["media_url"] or "youtu.be" in enriched["media_url"]:
+                enriched["content_type"] = "video"
+            elif enriched["media_url"].endswith((".pdf", ".epub")):
+                enriched["content_type"] = "document"
+
         # Add quality markers
-        enriched['quality_score'] = 0
-        if enriched.get('title'):
-            enriched['quality_score'] += 20
-        if enriched.get('description'):
-            enriched['quality_score'] += 20
-        if enriched.get('author'):
-            enriched['quality_score'] += 20
-        if enriched.get('published_at'):
-            enriched['quality_score'] += 20
-        if enriched.get('url'):
-            enriched['quality_score'] += 20
-        
+        enriched["quality_score"] = 0
+        if enriched.get("title"):
+            enriched["quality_score"] += 20
+        if enriched.get("description"):
+            enriched["quality_score"] += 20
+        if enriched.get("author"):
+            enriched["quality_score"] += 20
+        if enriched.get("published_at"):
+            enriched["quality_score"] += 20
+        if enriched.get("url"):
+            enriched["quality_score"] += 20
+
         return enriched

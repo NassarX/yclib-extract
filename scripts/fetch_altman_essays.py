@@ -12,14 +12,14 @@ Behavior:
 
 Usage:
     python scripts/fetch_altman_essays.py [--force] [--output-dir PATH]
-    
+
 Examples:
     # Append-only mode (default): skip existing essays
     python scripts/fetch_altman_essays.py
-    
+
     # Force refresh: re-fetch all essays
     python scripts/fetch_altman_essays.py --force
-    
+
     # Custom output directory
     python scripts/fetch_altman_essays.py --output-dir /custom/path
 """
@@ -36,9 +36,7 @@ from src.yclib_extract.pipeline import PipelineOrchestrator
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Fetch Sam Altman essays from blog.samaltman.com"
-    )
+    parser = argparse.ArgumentParser(description="Fetch Sam Altman essays from blog.samaltman.com")
     parser.add_argument(
         "--force",
         action="store_true",

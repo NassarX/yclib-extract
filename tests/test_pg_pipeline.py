@@ -1,20 +1,25 @@
 """Tests for the Paul Graham essay extraction pipeline."""
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 from yclib_extract.pipeline import PipelineOrchestrator
 from yclib_extract.scraper import RSSScraper
+
 
 def test_pg_index_discovery():
     """Test that PG index discovery combines HTML and RSS."""
     orch = PipelineOrchestrator()
-    
+
     with patch("requests.get") as mock_get:
         # Mock HTML index response
         mock_html = MagicMock()
-        mock_html.text = '<html><a href="essay1.html">Essay 1</a><a href="essay2.html">Essay 2</a></html>'
+        mock_html.text = (
+            '<html><a href="essay1.html">Essay 1</a><a href="essay2.html">Essay 2</a></html>'
+        )
         mock_html.raise_for_status = MagicMock()
-        
+
         # Mock RSS response
         mock_rss_content = b"""<?xml version="1.0" encoding="UTF-8"?>
         <rss version="2.0">
@@ -22,7 +27,7 @@ def test_pg_index_discovery():
             <item><link>https://paulgraham.com/essay3.html</link><title>Essay 3</title></item>
         </channel>
         </rss>"""
-        
+
         def side_effect(url, **kwargs):
             m = MagicMock()
             m.raise_for_status = MagicMock()
@@ -32,15 +37,16 @@ def test_pg_index_discovery():
             elif "rss.xml" in url:
                 m.content = mock_rss_content
             return m
-            
+
         mock_get.side_effect = side_effect
-        
+
         urls = orch._fetch_pg_index_urls()
-        
+
         assert any("essay1.html" in u for u in urls)
         assert any("essay2.html" in u for u in urls)
         assert any("essay3.html" in u for u in urls)
         assert len(urls) >= 3
+
 
 def test_pg_slug_generation():
     """Test canonical slug generation for PG essays."""
@@ -48,6 +54,7 @@ def test_pg_slug_generation():
     assert orch._pg_slug("https://paulgraham.com/best.html") == "best"
     assert orch._pg_slug("http://www.paulgraham.com/articles.html") == "articles"
     assert orch._pg_slug("https://paulgraham.com/sub/deep.html") == "deep"
+
 
 @patch("requests.get")
 def test_rss_scraper_pg_format(mock_get):
@@ -63,10 +70,10 @@ def test_rss_scraper_pg_format(mock_get):
     </channel>
     </rss>"""
     mock_get.return_value.raise_for_status = MagicMock()
-    
+
     scraper = RSSScraper("https://paulgraham.com/rss.xml")
     items = scraper.fetch_items()
-    
+
     assert len(items) == 1
     assert items[0]["title"] == "How to Do Great Work"
     assert items[0]["url"] == "https://paulgraham.com/greatwork.html"

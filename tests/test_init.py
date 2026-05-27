@@ -5,8 +5,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 from yclib_extract.commands.init import (
-    prompt_yes_no,
     prompt_choice,
+    prompt_yes_no,
     run_init,
 )
 

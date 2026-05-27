@@ -1,21 +1,21 @@
 """Pipeline orchestration for YC Library discovery, extraction, and audits."""
 
 import argparse
+import contextlib
 import csv
 import json
 import os
 import re
 import sqlite3
-import contextlib
 import subprocess
 import sys
+import unicodedata
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 from xml.etree import ElementTree as ET
-import unicodedata
 
 import requests
 from bs4 import BeautifulSoup
@@ -341,9 +341,7 @@ class PipelineDB:
     def get_last_run(self) -> Optional[Dict[str, Any]]:
         """Get the most recent pipeline run."""
         with self._connect() as conn:
-            cursor = conn.execute(
-                "SELECT * FROM pipeline_runs ORDER BY started_at DESC LIMIT 1"
-            )
+            cursor = conn.execute("SELECT * FROM pipeline_runs ORDER BY started_at DESC LIMIT 1")
             row = cursor.fetchone()
             if not row:
                 return None
@@ -352,9 +350,7 @@ class PipelineDB:
     def get_run_summary(self, run_id: str) -> Dict[str, Any]:
         """Get status summary for a specific run."""
         with self._connect() as conn:
-            cursor = conn.execute(
-                "SELECT status, COUNT(*) FROM pipeline_items GROUP BY status"
-            )
+            cursor = conn.execute("SELECT status, COUNT(*) FROM pipeline_items GROUP BY status")
             stats = dict(cursor.fetchall())
             return stats
 
@@ -463,13 +459,13 @@ class PipelineOrchestrator:
 
             stages = ["discover", "extract", "audit"]
             results = {"discovered": 0, "extracted": 0}
-            
+
             # Filter stages based on start_stage
-            active_stages = stages[stages.index(start_stage):]
-            
+            active_stages = stages[stages.index(start_stage) :]
+
             for stage in active_stages:
                 self._log(f"executing stage: {stage}")
-                
+
                 if stage == "discover":
                     results["discovered"] = self.discover(run_id=run_id)
                 elif stage == "extract":
@@ -478,17 +474,21 @@ class PipelineOrchestrator:
                     )
                 elif stage == "audit":
                     self.write_unified_audit()
-                    
+
             self._write_scrape_run(
-                run_id, active_stages[-1], results["discovered"], results["extracted"], 
-                force=force, limit=limit
+                run_id,
+                active_stages[-1],
+                results["discovered"],
+                results["extracted"],
+                force=force,
+                limit=limit,
             )
             self.db.end_run(run_id, "done")
             self._log("run complete")
-            
+
             summary = self.db.get_run_summary(run_id)
             self._log(f"Run Summary: {summary}")
-            
+
             return results
         except Exception:
             self.db.end_run(run_id, "error")
