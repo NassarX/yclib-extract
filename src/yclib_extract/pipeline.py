@@ -717,18 +717,11 @@ class PipelineOrchestrator:
         urls_with_dates = []
 
         try:
-            response = requests.get(SA_ARTICLES_FEED_URL, timeout=20)
-            response.raise_for_status()
-            root = ET.fromstring(response.content)
-            ns = {"atom": "http://www.w3.org/2005/Atom"}
-
-            for entry in root.findall("atom:entry", ns):
-                link = entry.find("atom:link", ns)
-                if link is not None:
-                    href = link.get("href")
-                    published = entry.findtext("atom:published", namespaces=ns)
-                    if href:
-                        urls_with_dates.append((href, published))
+            rss = RSSScraper(SA_ARTICLES_FEED_URL)
+            items = rss.fetch_items()
+            for item in items:
+                if item.get("url"):
+                    urls_with_dates.append((item["url"], item.get("date")))
 
             if urls_with_dates:
                 self._log(f"fetched {len(urls_with_dates)} URLs from Atom feed")
