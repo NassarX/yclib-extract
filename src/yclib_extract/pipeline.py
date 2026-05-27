@@ -25,6 +25,7 @@ from .extractor import (
     DEFAULT_DB_PATH,
     REMOVED_WORD_THRESHOLD,
     ContentExtractor,
+    YCLibraryExtractionEnhancer,
 )
 from .lib.html_cleaning import (
     extract_main_content,
@@ -688,6 +689,7 @@ class PipelineOrchestrator:
                     "status": status,
                     "reason": reason,
                     "local_path": str(output_path),
+                    "quality": metadata.get("quality") if status == "fetched" else None,
                 }
             )
 
@@ -717,18 +719,11 @@ class PipelineOrchestrator:
         urls_with_dates = []
 
         try:
-            response = requests.get(SA_ARTICLES_FEED_URL, timeout=20)
-            response.raise_for_status()
-            root = ET.fromstring(response.content)
-            ns = {"atom": "http://www.w3.org/2005/Atom"}
-
-            for entry in root.findall("atom:entry", ns):
-                link = entry.find("atom:link", ns)
-                if link is not None:
-                    href = link.get("href")
-                    published = entry.findtext("atom:published", namespaces=ns)
-                    if href:
-                        urls_with_dates.append((href, published))
+            rss = RSSScraper(SA_ARTICLES_FEED_URL)
+            items = rss.fetch_items()
+            for item in items:
+                if item.get("url"):
+                    urls_with_dates.append((item["url"], item.get("date")))
 
             if urls_with_dates:
                 self._log(f"fetched {len(urls_with_dates)} URLs from Atom feed")
@@ -855,6 +850,16 @@ class PipelineOrchestrator:
                         markdown, blog_domain="blog.samaltman.com", url_to_slug_map=url_to_slug
                     )
 
+                    word_count = _count_words(markdown)
+                    reading_time = _estimate_reading_time(word_count)
+
+                    metrics = YCLibraryExtractionEnhancer.track_extraction_quality(
+                        markdown, {"title": title, "author": "Sam Altman"}
+                    )
+                    markdown = YCLibraryExtractionEnhancer.enrich_with_quality_markers(
+                        markdown, metrics
+                    )
+
                     metadata = {
                         "id": title_slug,
                         "url": url,
@@ -867,6 +872,9 @@ class PipelineOrchestrator:
                         "file": filename,
                         "source_url": url,
                         "published": published_date or "",
+                        "word_count": word_count,
+                        "reading_time": reading_time,
+                        "quality": metrics.get("quality_level"),
                     }
                     self.sa_extractor.save_markdown(
                         title_slug, markdown, metadata, source_type="essay"
@@ -889,6 +897,7 @@ class PipelineOrchestrator:
                     "reason": reason,
                     "local_path": str(output_path),
                     "published": published_date or "",
+                    "quality": metadata.get("quality") if status == "fetched" else None,
                 }
             )
 
