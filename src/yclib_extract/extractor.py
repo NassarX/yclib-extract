@@ -29,12 +29,14 @@ FRONTMATTER_FIELDS = (
     "author",
     "summary",
     "published_at",
+    "revised_at",
     "exported_at",
     "source_url",
     "file",
     "video_url",
     "podcast_url",
     "word_count",
+    "reading_time",
 )
 
 
@@ -335,7 +337,7 @@ class ContentExtractor:
                 value = value.replace("---", "--").strip()
             elif isinstance(value, list):
                 value = [str(v).replace("---", "--") for v in value]
-            
+
             validated[field] = value
         return validated
 

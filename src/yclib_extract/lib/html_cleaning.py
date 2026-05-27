@@ -335,6 +335,53 @@ def process_footnotes(markdown: str) -> str:
     return result.strip()
 
 
+def extract_pg_dates_and_clean(markdown: str) -> tuple:
+    """
+    Remove index.html links and extract publish/revision dates from PG essays.
+
+    Returns:
+        tuple: (cleaned_markdown, publish_date, revision_date)
+    """
+    # 1. Remove index.html link
+    markdown = markdown.replace("[](index.html)", "").strip()
+
+    # 2. Extract dates
+    months = "January|February|March|April|May|June|July|August|September|October|November|December"
+    date_pattern = rf"({months})\s+(\d{{4}})(?:,\s+rev\s+({months})\s+(\d{{4}}))?"
+
+    month_map = {
+        "January": "01",
+        "February": "02",
+        "March": "03",
+        "April": "04",
+        "May": "05",
+        "June": "06",
+        "July": "07",
+        "August": "08",
+        "September": "09",
+        "October": "10",
+        "November": "11",
+        "December": "12",
+    }
+
+    publish_date = None
+    revision_date = None
+
+    # Only search in the first 20 lines for performance and accuracy
+    lines = markdown.split("\n")
+    for line in lines[:20]:
+        match = re.search(date_pattern, line)
+        if match:
+            p_month, p_year, r_month, r_year = match.groups()
+            if p_month and p_year:
+                publish_date = f"{p_year}-{month_map[p_month]}-01"
+            if r_month and r_year:
+                revision_date = f"{r_year}-{month_map[r_month]}-01"
+            break
+
+    return markdown, publish_date, revision_date
+
+
 def generate_enriched_frontmatter(metadata: dict, content: str) -> str:
     """Generate YAML frontmatter with enhanced metadata.
 
