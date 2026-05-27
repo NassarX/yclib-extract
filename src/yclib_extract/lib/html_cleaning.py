@@ -315,3 +315,35 @@ def process_footnotes(markdown: str) -> str:
             result += f"[^{fn_num}]: {footnotes[fn_num]}\n"
 
     return result.strip()
+
+
+def generate_enriched_frontmatter(metadata: dict, content: str) -> str:
+    """Generate YAML frontmatter with enhanced metadata.
+    
+    Args:
+        metadata: Source metadata (title, author, date, etc.)
+        content: Extracted content body
+        
+    Returns:
+        YAML frontmatter string
+    """
+    import yaml
+    from datetime import datetime
+    
+    frontmatter = {
+        'title': metadata.get('title', 'Untitled'),
+        'author': metadata.get('author', 'Unknown'),
+        'date': metadata.get('date', datetime.now().isoformat()),
+        'source_url': metadata.get('url', ''),
+        'tags': metadata.get('tags', []),
+    }
+    
+    # Add content metrics
+    frontmatter['word_count'] = len(content.split())
+    frontmatter['reading_time_minutes'] = max(1, frontmatter['word_count'] // 250)
+    
+    # Add extraction metadata
+    frontmatter['extracted_at'] = datetime.now().isoformat()
+    frontmatter['extraction_quality'] = metadata.get('quality', 'unknown')
+    
+    return '---\n' + yaml.dump(frontmatter, default_flow_style=False) + '---\n'
