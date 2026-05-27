@@ -354,6 +354,7 @@ def get_transcript(url: str, with_timestamps: bool = False) -> Optional[str]:
     1. YouTubeTranscriptApi
     2. yt-dlp captions
     3. YouTube watch page captions metadata
+    4. Invidious API fallback
     """
     video_id = extract_video_id(url)
     if not video_id:
@@ -370,9 +371,15 @@ def get_transcript(url: str, with_timestamps: bool = False) -> Optional[str]:
         transcript = _parse_caption_payload(transcript, with_timestamps=with_timestamps)
         return transcript if with_timestamps else format_transcript(transcript)
 
+    # Fallback to watch page scraping
     transcript = get_transcript_from_youtube_page(video_id, with_timestamps=with_timestamps)
     if transcript:
         return transcript if with_timestamps else format_transcript(transcript)
+
+    # Fallback to Invidious
+    transcript = TranscriptRecoveryEnhancer.try_invidious_transcript(video_id)
+    if transcript:
+        return format_transcript(transcript)
 
     return None
 
