@@ -401,3 +401,67 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+class TranscriptRecoveryEnhancer:
+    """Enhanced transcript recovery with improved fallback chain."""
+
+    # Invidious instances for fallback
+    DEFAULT_INVIDIOUS_INSTANCES = [
+        'yewtu.cafe',
+        'inv.riverside.rocks',
+        'yt.artemislena.eu',
+        'invidio.us'
+    ]
+
+    @staticmethod
+    def try_invidious_transcript(video_id: str, instances: list = None) -> Optional[str]:
+        """Try to fetch transcript from Invidious mirror.
+        
+        Args:
+            video_id: YouTube video ID
+            instances: List of Invidious instances to try
+            
+        Returns:
+            Transcript text or None if unavailable
+        """
+        if instances is None:
+            instances = TranscriptRecoveryEnhancer.DEFAULT_INVIDIOUS_INSTANCES
+        
+        for instance in instances:
+            try:
+                url = f"https://{instance}/api/v1/captions/{video_id}"
+                resp = requests.get(url, timeout=5)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    captions = data.get('captions', [])
+                    if captions:
+                        # Get English or first available caption
+                        for cap in captions:
+                            if cap.get('label', '').startswith('English'):
+                                return TranscriptRecoveryEnhancer._download_invidious_captions(
+                                    instance, video_id, cap.get('label')
+                                )
+                        # Fallback to first available
+                        if captions:
+                            return TranscriptRecoveryEnhancer._download_invidious_captions(
+                                instance, video_id, captions[0].get('label')
+                            )
+            except Exception:
+                continue
+        
+        return None
+
+    @staticmethod
+    def _download_invidious_captions(instance: str, video_id: str, label: str) -> Optional[str]:
+        """Download actual captions from Invidious."""
+        try:
+            url = f"https://{instance}/api/v1/captions/{video_id}"
+            params = {'label': label}
+            resp = requests.get(url, params=params, timeout=5)
+            if resp.status_code == 200:
+                lines = [line.strip() for line in resp.text.split('\n') if line.strip()]
+                return '\n'.join(lines)
+        except Exception:
+            pass
+        return None
