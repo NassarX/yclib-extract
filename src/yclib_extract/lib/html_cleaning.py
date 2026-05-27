@@ -347,3 +347,33 @@ def generate_enriched_frontmatter(metadata: dict, content: str) -> str:
     frontmatter['extraction_quality'] = metadata.get('quality', 'unknown')
     
     return '---\n' + yaml.dump(frontmatter, default_flow_style=False) + '---\n'
+
+
+def extract_footnotes_from_html(html: str) -> tuple:
+    """Extract footnotes from HTML structure.
+    
+    Args:
+        html: HTML content potentially containing footnotes
+        
+    Returns:
+        Tuple of (cleaned_html, footnotes_dict)
+    """
+    from bs4 import BeautifulSoup
+    import re
+    
+    soup = BeautifulSoup(html, 'html.parser')
+    footnotes = {}
+    footnote_pattern = re.compile(r'fn(\d+)')
+    
+    # Look for footnote containers (various formats)
+    for container in soup.find_all(['div', 'section'], class_=re.compile(r'footnote|note|endnote', re.I)):
+        for item in container.find_all(['li', 'p']):
+            # Extract ID
+            item_id = item.get('id', '')
+            match = footnote_pattern.search(item_id)
+            if match:
+                fn_id = match.group(1)
+                footnotes[fn_id] = item.get_text()
+                item.decompose()
+    
+    return str(soup), footnotes
