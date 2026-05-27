@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 import requests
 from bs4 import BeautifulSoup
 
-from .lib.html_cleaning import extract_main_content, html_to_markdown
+from .lib.html_cleaning import extract_main_content, extract_page_metadata, html_to_markdown
 from .lib.youtube_transcripts import extract_podcast_url, extract_youtube_url, get_transcript
 from .scraper import is_ignored, load_ignore_sources
 
@@ -46,6 +46,7 @@ class ExtractionResult:
     video_url: Optional[str] = None
     podcast_url: Optional[str] = None
     source_type: Optional[str] = None
+    published_at: Optional[str] = None
 
 
 class ExtractionDB:
@@ -218,6 +219,9 @@ class ContentExtractor:
 
             # Extract main content
             content_html = extract_main_content(soup)
+            page_meta = extract_page_metadata(soup)
+            published_at = page_meta.get("published_at")
+
             if not content_html:
                 # If we have a media hint, we might still be able to save it
                 if media_url_hint:
@@ -311,6 +315,7 @@ class ContentExtractor:
                 video_url=video_url,
                 podcast_url=podcast_url,
                 source_type=canonical_source_type,
+                published_at=published_at,
             )
 
         except requests.exceptions.Timeout:
@@ -487,6 +492,9 @@ class ContentExtractor:
                 try:
                     result = future.result()
                     if result:
+                        if result.published_at and not post.get("published_at"):
+                            post["published_at"] = result.published_at
+
                         self.save_markdown(
                             job_id,
                             result.content,
