@@ -154,6 +154,23 @@ def extract_main_content(soup) -> Optional[str]:
     return str(soup.body) if soup.body else None
 
 
+def extract_page_metadata(soup) -> Dict[str, str]:
+    """Extract additional metadata from the page, like created_at."""
+    meta = {}
+    data_page = soup.find(attrs={"data-page": True})
+    if data_page:
+        raw_payload = data_page.get("data-page") or ""
+        try:
+            payload = json.loads(html_lib.unescape(raw_payload))
+            article = payload.get("props", {}).get("article", {})
+            created_at = article.get("created_at") or article.get("published_at")
+            if created_at and isinstance(created_at, str):
+                meta["published_at"] = created_at.split("T")[0]
+        except (TypeError, ValueError, json.JSONDecodeError):
+            pass
+    return meta
+
+
 def extract_transcript_section(soup) -> Optional[str]:
     """Extract on-page transcript if present."""
     patterns = [
