@@ -15,15 +15,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
-from xml.etree import ElementTree as ET
-
 import requests
 from bs4 import BeautifulSoup
 
 from .extractor import (
     DEFAULT_CONTENT_DIR,
     DEFAULT_DB_PATH,
-    REMOVED_WORD_THRESHOLD,
     ContentExtractor,
     YCLibraryExtractionEnhancer,
 )
@@ -176,7 +173,7 @@ class PipelineDB:
 
     @contextlib.contextmanager
     def _connect(self):
-        """Internal helper to ensure connections are always closed and use a timeout for robustness."""
+        """Ensure connections are closed and use a timeout for robustness."""
         conn = sqlite3.connect(self.db_path, timeout=30)
         try:
             yield conn
@@ -463,7 +460,7 @@ class PipelineOrchestrator:
             results = {"discovered": 0, "extracted": 0}
 
             # Filter stages based on start_stage
-            active_stages = stages[stages.index(start_stage) :]
+            active_stages = stages[stages.index(start_stage):]
 
             for stage in active_stages:
                 self._log(f"executing stage: {stage}")
@@ -1495,11 +1492,18 @@ def main():
             replay=args.replay,
             force=args.force,
         )
+        print("Full extraction complete:")
         print(
-            "Full extraction complete: "
-            f"PG essays: {result.get('pg_fetched', 0)} fetched, {result.get('pg_failed', 0)} failed | "
-            f"SA essays: {result.get('sa_fetched', 0)} fetched, {result.get('sa_failed', 0)} failed | "
-            f"YC: {result.get('discovered', 0)} discovered, {result.get('extracted', 0)} extracted"
+            f"PG essays: {result.get('pg_fetched', 0)} fetched, "
+            f"{result.get('pg_failed', 0)} failed"
+        )
+        print(
+            f"SA essays: {result.get('sa_fetched', 0)} fetched, "
+            f"{result.get('sa_failed', 0)} failed"
+        )
+        print(
+            f"YC: {result.get('discovered', 0)} discovered, "
+            f"{result.get('extracted', 0)} extracted"
         )
 
 
