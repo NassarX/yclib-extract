@@ -176,7 +176,23 @@ def extract_page_metadata(soup) -> Dict[str, str]:
 
     # Check for Posthaven formatted date (Sam Altman blog)
     if not meta.get("published_at"):
-        date_span = soup.find("span", class_="posthaven-formatted-date")
+        date_span = None
+
+        # 1. Target the specific container for the actual post date
+        actual_date_div = soup.find("div", class_="actual-date")
+        if actual_date_div:
+            date_span = actual_date_div.find("span", class_="posthaven-formatted-date")
+
+        # 2. Fallback to the post-date section
+        if not date_span:
+            post_date_sec = soup.find("section", class_="post-date")
+            if post_date_sec:
+                date_span = post_date_sec.find("span", class_="posthaven-formatted-date")
+
+        # 3. Fallback to any posthaven date (risky due to sidebars, but a last resort)
+        if not date_span:
+            date_span = soup.find("span", class_="posthaven-formatted-date")
+
         if date_span and date_span.has_attr("data-unix-time"):
             try:
                 unix_time = int(date_span["data-unix-time"])
