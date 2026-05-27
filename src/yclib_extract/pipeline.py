@@ -33,7 +33,7 @@ from .lib.html_cleaning import (
     process_internal_links,
 )
 from .lib.youtube_transcripts import extract_podcast_url, extract_youtube_url
-from .scraper import AlgoliaScraper, is_ignored, load_ignore_sources
+from .scraper import AlgoliaScraper, RSSScraper, is_ignored, load_ignore_sources
 
 ARTIFACTS_DIR = Path("artifacts").resolve()
 METADATA_DIR = ARTIFACTS_DIR / "metadata"
@@ -50,6 +50,7 @@ RETRYABLE_STATUSES = {"failed", "error", "short"}
 COMPLETED_STATUSES = {"done", "short", "removed"}
 STAGE_ORDER = {"discover": 0, "extract": 1, "audit": 2}
 PG_ARTICLES_INDEX_URL = "https://paulgraham.com/articles.html"
+PG_RSS_URL = "https://paulgraham.com/rss.xml"
 PG_INDEX_DENYLIST = {
     "articles.html",
     "index.html",
@@ -553,23 +554,39 @@ class PipelineOrchestrator:
         return _slugify(stem)
 
     def _fetch_pg_index_urls(self) -> List[str]:
-        response = requests.get(PG_ARTICLES_INDEX_URL, timeout=20)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
+        """Fetch all Paul Graham essay URLs from both HTML index and RSS feed."""
         urls = set()
-        for link in soup.find_all("a", href=True):
-            absolute = urljoin(PG_ARTICLES_INDEX_URL, link["href"])
-            parsed = urlparse(absolute)
-            if parsed.netloc.lower() not in {"paulgraham.com", "www.paulgraham.com"}:
-                continue
-            name = Path(parsed.path).name.lower()
-            if not name.endswith(".html"):
-                continue
-            if name in PG_INDEX_DENYLIST:
-                continue
-            clean_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
-            urls.add(clean_url)
-        return sorted(urls)
+
+        # 1. Fetch from HTML index (archive)
+        try:
+            response = requests.get(PG_ARTICLES_INDEX_URL, timeout=20)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, "html.parser")
+            for link in soup.find_all("a", href=True):
+                absolute = urljoin(PG_ARTICLES_INDEX_URL, link["href"])
+                parsed = urlparse(absolute)
+                if parsed.netloc.lower() not in {"paulgraham.com", "www.paulgraham.com"}:
+                    continue
+                name = Path(parsed.path).name.lower()
+                if not name.endswith(".html"):
+                    continue
+                if name in PG_INDEX_DENYLIST:
+                    continue
+                clean_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+                urls.add(clean_url)
+        except Exception as e:
+            self._log(f"Warning: Failed to fetch PG HTML index: {e}")
+
+        # 2. Fetch from RSS feed (recent)
+        try:
+            rss = RSSScraper(PG_RSS_URL)
+            for item in rss.fetch_items():
+                if item.get("url"):
+                    urls.add(item["url"])
+        except Exception as e:
+            self._log(f"Warning: Failed to fetch PG RSS feed: {e}")
+
+        return sorted(list(urls))
 
     def fetch_pg_essays(self, force: bool = False) -> Dict[str, int]:
         """Fetch all Paul Graham essays from the authoritative index into PG_ESSAYS_DIR."""

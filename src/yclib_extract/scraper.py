@@ -86,6 +86,61 @@ def _is_media_url(value: str) -> bool:
     return "youtu.be/" in value or "youtube.com/" in value or "open.spotify.com/" in value
 
 
+class RSSScraper:
+    """Discover essays via RSS or Atom feeds."""
+
+    def __init__(self, feed_url: str):
+        self.feed_url = feed_url
+
+    def fetch_items(self) -> List[Dict[str, str]]:
+        """Fetch and parse feed items.
+        
+        Returns:
+            List of dicts with 'url', 'title', and 'date'
+        """
+        try:
+            response = requests.get(self.feed_url, timeout=20)
+            response.raise_for_status()
+            
+            # Simple XML parsing for RSS/Atom
+            import xml.etree.ElementTree as ET
+            root = ET.fromstring(response.content)
+            
+            items = []
+            # Try Atom format (Altman)
+            ns = {"atom": "http://www.w3.org/2005/Atom"}
+            for entry in root.findall("atom:entry", ns):
+                title = entry.find("atom:title", ns)
+                link = entry.find("atom:link", ns)
+                updated = entry.find("atom:updated", ns)
+                if link is not None:
+                    items.append({
+                        "url": link.get("href"),
+                        "title": title.text if title is not None else "",
+                        "date": updated.text if updated is not None else ""
+                    })
+            
+            if items:
+                return items
+
+            # Try RSS 2.0 format (PG)
+            for item in root.findall(".//item"):
+                title = item.find("title")
+                link = item.find("link")
+                pub_date = item.find("pubDate")
+                if link is not None:
+                    items.append({
+                        "url": link.text,
+                        "title": title.text if title is not None else "",
+                        "date": pub_date.text if pub_date is not None else ""
+                    })
+            
+            return items
+        except Exception as e:
+            print(f"Error fetching RSS feed {self.feed_url}: {e}")
+            return []
+
+
 class AlgoliaScraper:
     """Discover YC Library posts via Algolia search."""
 
