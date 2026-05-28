@@ -37,14 +37,17 @@ src/yclib_extract/
 ## User-facing commands
 - `yclib-extract init`
 - `yclib-extract scrape`
+- `yclib-extract scrape-blog`
 - `yclib-extract extract`
 - `yclib-extract pipeline`
 
-`scrape` discovers YC Library posts via Algolia. `extract` converts metadata into Markdown. `pipeline` orchestrates discovery, extraction, and audits with `--mode weekly|dev`, `--start-stage discover|extract|audit`, `--replay`, `--workflow startup_school|full`, and the usual force/retry flags.
+`scrape` discovers YC Library posts via Algolia. `scrape-blog` discovers YC Blog posts, emits a taxonomy snapshot, and supports include/exclude tag filtering where exclude tags take precedence. `extract` converts metadata into Markdown. `pipeline` orchestrates discovery, extraction, and audits with `--mode weekly|dev`, `--start-stage discover|extract|audit`, `--replay`, `--workflow startup_school|yc_blog|full`, and the usual force/retry flags.
 
 ## Core conventions
 - Treat `artifacts/metadata/yc_library_metadata.json` as the discovery source of truth.
+- Treat `artifacts/metadata/yc_blog_metadata.json` as the YC Blog discovery source of truth.
 - Write extracted Markdown to `artifacts/yc_library/`.
+- Write YC Blog Markdown to `artifacts/yc_blog/`.
 - Keep Startup School curriculum output in `artifacts/yc_startup_school/`.
 - Keep essay fetch outputs in `artifacts/pg_essays/` and `artifacts/sam_altman_essays/`.
 - Keep extraction state in `artifacts/extraction_jobs.db`.
@@ -54,7 +57,7 @@ src/yclib_extract/
 - Keep comments minimal and code paths explicit.
 
 ## Configuration
-- Algolia: `ALGOLIA_APP_ID`, `ALGOLIA_API_KEY`, `ALGOLIA_INDEX`
+- Algolia: `ALGOLIA_APP_ID`, `ALGOLIA_API_KEY`, `ALGOLIA_INDEX`, `ALGOLIA_BLOG_INDEX`
 - Paths: `METADATA_DIR`, `CONTENT_DIR`
 - Extraction: `YCLIB_EXTRACT_MIN_CONTENT_LENGTH`
 - Transcript fallback: `INVIDIOUS_INSTANCES`
