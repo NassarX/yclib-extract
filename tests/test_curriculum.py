@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from scripts.build_curriculum import get_res_id, get_source_type, slugify
+from scripts.orchestration.build_curriculum import get_res_id, get_source_type, slugify
 
 
 def test_slugify():
@@ -41,7 +41,7 @@ def test_get_res_id_priority():
 
 def test_curriculum_metadata_injection(tmp_path):
     """Test generating metadata JSON from curriculum items."""
-    from scripts.build_curriculum import to_metadata_json
+    from scripts.orchestration.build_curriculum import to_metadata_json
 
     res = {
         "title": "Test Resource",
