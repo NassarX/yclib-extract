@@ -277,8 +277,10 @@ def _extract_text_content(html: str) -> str:
     for selector in ("article", "main"):
         node = soup.select_one(selector)
         if node:
-            return node.get_text(" ", strip=True)
-    return soup.get_text(" ", strip=True)
+            text = node.get_text(" ", strip=True)
+            return str(text) if text is not None else ""
+    text = soup.get_text(" ", strip=True)
+    return str(text) if text is not None else ""
 
 
 def passes_conditional_content_filter(

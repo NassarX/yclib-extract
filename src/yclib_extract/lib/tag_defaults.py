@@ -8,7 +8,7 @@ metadata tags. Handles:
 - Startup School: YC, startup-school + metadata tags
 """
 
-from typing import Dict, List, Set
+from typing import Dict, List, Optional, Set
 
 # Default tags by source type
 SOURCE_DEFAULT_TAGS: Dict[str, List[str]] = {
@@ -90,7 +90,7 @@ def merge_tags(
 def build_tags_for_resource(
     resource_type: str,
     source_type: str,
-    metadata_tags: List[str] | None = None,
+    metadata_tags: Optional[List[str]] = None,
 ) -> List[str]:
     """Build final tags list for a resource.
 
