@@ -1,3 +1,4 @@
 [flake8]
 per-file-ignores =
     tests/*.py: F401, E402, E501, F811, W291
+extend-ignore = E203

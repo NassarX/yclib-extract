@@ -15,6 +15,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -33,16 +34,30 @@ from .lib.html_cleaning import (
     process_internal_links,
 )
 from .lib.youtube_transcripts import extract_podcast_url, extract_youtube_url
-from .scraper import AlgoliaScraper, RSSScraper, is_ignored, load_ignore_sources
+from .scraper import (
+    DEFAULT_YC_BLOG_CONDITIONAL_MIN_WORDS,
+    DEFAULT_YC_BLOG_CONDITIONAL_TAGS,
+    DEFAULT_YC_BLOG_EXCLUDE_TAGS,
+    DEFAULT_YC_BLOG_INCLUDE_TAGS,
+    AlgoliaScraper,
+    RSSScraper,
+    YCBlogScraper,
+    build_taxonomy_from_posts,
+    is_ignored,
+    load_ignore_sources,
+)
 
 ARTIFACTS_DIR = Path("artifacts").resolve()
 METADATA_DIR = ARTIFACTS_DIR / "metadata"
 DEFAULT_METADATA_DIR = str(METADATA_DIR / "yc_library_metadata.json")
+DEFAULT_YC_BLOG_METADATA = METADATA_DIR / "yc_blog_metadata.json"
 DEFAULT_PG_METADATA = METADATA_DIR / "pg_essays_metadata.json"
 DEFAULT_SA_METADATA = METADATA_DIR / "altman_essays_metadata.json"
 DEFAULT_SS_METADATA = METADATA_DIR / "yc_startup_school_metadata.json"
 DEFAULT_PG_ESSAYS_DIR = str(ARTIFACTS_DIR / "pg_essays")
 DEFAULT_SA_ESSAYS_DIR = str(ARTIFACTS_DIR / "altman_essays")
+DEFAULT_YC_BLOG_DIR = str(ARTIFACTS_DIR / "yc_blog")
+DEFAULT_YC_BLOG_TAXONOMY = METADATA_DIR / "yc_blog_taxonomy.json"
 SA_STARTUP_DIR = ARTIFACTS_DIR / "yc_startup_school"
 UNIFIED_AUDIT_CSV = ARTIFACTS_DIR / "resources_audit.csv"
 SCRAPE_RUNS_DIR = Path("scrape_runs").resolve()
@@ -101,7 +116,8 @@ def _load_metadata_posts(metadata_path: str) -> List[Dict[str, Any]]:
         data = _load_json(path)
         # Check if it has a "posts" key (new format with consolidated structure)
         if isinstance(data, dict) and "posts" in data:
-            return data.get("posts", [])
+            posts = data.get("posts", [])
+            return posts if isinstance(posts, list) else []
         # Otherwise return the data as-is if it's a list
         if isinstance(data, list):
             return data
@@ -367,9 +383,12 @@ class PipelineOrchestrator:
         algolia_app_id: Optional[str] = None,
         algolia_api_key: Optional[str] = None,
         algolia_index: str = "library_posts",
+        algolia_blog_index: str = "ycdc_blog_production",
+        algolia_blog_api_key: Optional[str] = None,
     ):
         self.metadata_dir = Path(metadata_dir)
         self.content_dir = Path(content_dir)
+        self.yc_blog_dir = Path(os.environ.get("YC_BLOG_DIR", DEFAULT_YC_BLOG_DIR))
         self.pg_essays_dir = Path(os.environ.get("PG_ESSAYS_DIR", DEFAULT_PG_ESSAYS_DIR))
         self.sa_essays_dir = Path(os.environ.get("SA_ESSAYS_DIR", DEFAULT_SA_ESSAYS_DIR))
         self.workers = workers
@@ -383,6 +402,15 @@ class PipelineOrchestrator:
         self.sa_extractor = ContentExtractor(
             output_dir=str(self.sa_essays_dir), min_content_length=1
         )
+        self.blog_extractor = ContentExtractor(
+            output_dir=str(self.yc_blog_dir), min_content_length=min_content_length
+        )
+        self.yc_blog_metadata_path = Path(
+            os.environ.get("YC_BLOG_METADATA", str(DEFAULT_YC_BLOG_METADATA))
+        )
+        self.yc_blog_taxonomy_path = Path(
+            os.environ.get("YC_BLOG_TAXONOMY", str(DEFAULT_YC_BLOG_TAXONOMY))
+        )
         self.pg_metadata_path = Path(os.environ.get("PG_METADATA", str(DEFAULT_PG_METADATA)))
         self.sa_metadata_path = Path(os.environ.get("SA_METADATA", str(DEFAULT_SA_METADATA)))
         self.ss_metadata_path = Path(os.environ.get("SS_METADATA", str(DEFAULT_SS_METADATA)))
@@ -391,9 +419,15 @@ class PipelineOrchestrator:
             api_key=algolia_api_key,
             index_name=algolia_index,
         )
+        self.blog_scraper = YCBlogScraper(
+            app_id=algolia_app_id,
+            api_key=algolia_blog_api_key or algolia_api_key,
+            index_name=algolia_blog_index,
+        )
         # Create parent directories
         METADATA_DIR.mkdir(parents=True, exist_ok=True)
         self.content_dir.mkdir(parents=True, exist_ok=True)
+        self.yc_blog_dir.mkdir(parents=True, exist_ok=True)
         self.pg_essays_dir.mkdir(parents=True, exist_ok=True)
         self.sa_essays_dir.mkdir(parents=True, exist_ok=True)
 
@@ -460,7 +494,7 @@ class PipelineOrchestrator:
             results = {"discovered": 0, "extracted": 0}
 
             # Filter stages based on start_stage
-            active_stages = stages[stages.index(start_stage):]
+            active_stages = stages[stages.index(start_stage) :]
 
             for stage in active_stages:
                 self._log(f"executing stage: {stage}")
@@ -494,8 +528,16 @@ class PipelineOrchestrator:
             self._log("run failed")
             raise
 
-    def run_full(self, force: bool = False, replay: bool = False) -> Dict[str, Any]:
-        """Run full extraction: PG Essays, Sam Altman Essays, YC Library, and Startup School."""
+    def run_full(
+        self,
+        force: bool = False,
+        replay: bool = False,
+        blog_include_tags: Optional[List[str]] = None,
+        blog_exclude_tags: Optional[List[str]] = None,
+        blog_conditional_tags: Optional[List[str]] = None,
+        blog_conditional_min_words: int = DEFAULT_YC_BLOG_CONDITIONAL_MIN_WORDS,
+    ) -> Dict[str, Any]:
+        """Run full extraction across all configured sources."""
         self._log("starting full extraction pipeline")
 
         pg_stats = self.fetch_pg_essays(force=force or replay)
@@ -503,12 +545,26 @@ class PipelineOrchestrator:
 
         # YC Library
         yc_stats = self.run(mode="dev" if force or replay else "weekly", force=force, replay=replay)
+        blog_stats = self.run_yc_blog(
+            replay=replay,
+            force=force,
+            include_tags=blog_include_tags,
+            exclude_tags=blog_exclude_tags,
+            conditional_tags=blog_conditional_tags,
+            conditional_min_words=blog_conditional_min_words,
+        )
 
         # Startup School
         ss_stats = self.run_startup_school(force=force, replay=replay)
 
         self._log("full extraction pipeline complete")
-        return {"pg": pg_stats, "sa": sa_stats, "yc": yc_stats, "ss": ss_stats}
+        return {
+            "pg": pg_stats,
+            "sa": sa_stats,
+            "yc": yc_stats,
+            "yc_blog": blog_stats,
+            "ss": ss_stats,
+        }
 
     def run_startup_school(self, replay: bool = False, force: bool = False) -> Dict[str, Any]:
         """Run standalone startup-school workflow using standard metadata-driven extraction."""
@@ -563,6 +619,54 @@ class PipelineOrchestrator:
             self._log("startup_school run failed")
             raise
 
+    def run_yc_blog(
+        self,
+        replay: bool = False,
+        force: bool = False,
+        include_tags: Optional[List[str]] = None,
+        exclude_tags: Optional[List[str]] = None,
+        conditional_tags: Optional[List[str]] = None,
+        conditional_min_words: int = DEFAULT_YC_BLOG_CONDITIONAL_MIN_WORDS,
+    ) -> Dict[str, Any]:
+        """Run YC Blog workflow with taxonomy PoC + filtered extraction."""
+        run_id = datetime.now().strftime("%Y%m%d%H%M%S")
+        mode = "dev" if force else "weekly"
+        self.db.begin_run(
+            run_id,
+            "discover",
+            mode,
+            replay,
+            str(self.yc_blog_metadata_path),
+            str(self.yc_blog_dir),
+        )
+        force_str = ", force" if force else ""
+        self._log(f"yc_blog run {run_id} started ({mode}{force_str})")
+
+        include_values = include_tags or list(DEFAULT_YC_BLOG_INCLUDE_TAGS)
+        exclude_values = exclude_tags or list(DEFAULT_YC_BLOG_EXCLUDE_TAGS)
+        conditional_values = conditional_tags or list(DEFAULT_YC_BLOG_CONDITIONAL_TAGS)
+
+        try:
+            discovered = self.discover_blog(
+                include_tags=include_values,
+                exclude_tags=exclude_values,
+                conditional_tags=conditional_values,
+                conditional_min_words=conditional_min_words,
+                taxonomy_output=self.yc_blog_taxonomy_path,
+            )
+            extracted = self.extract_blog(
+                force=force or replay,
+                retry_failed_only=False,
+            )
+            self.write_unified_audit()
+            self.db.end_run(run_id, "done")
+            self._log("yc_blog run complete")
+            return {"discovered": discovered, "extracted": extracted}
+        except Exception:
+            self.db.end_run(run_id, "error")
+            self._log("yc_blog run failed")
+            raise
+
     def _run_curriculum_build(self, inject_only: bool) -> None:
         cmd = [
             sys.executable,
@@ -589,7 +693,7 @@ class PipelineOrchestrator:
 
     def _fetch_pg_index_urls(self) -> List[str]:
         """Fetch all Paul Graham essay URLs from both HTML index and RSS feed."""
-        urls = set()
+        urls: set[str] = set()
 
         # 1. Fetch from HTML index (archive)
         try:
@@ -597,7 +701,7 @@ class PipelineOrchestrator:
             response.raise_for_status()
             soup = BeautifulSoup(response.text, "html.parser")
             for link in soup.find_all("a", href=True):
-                absolute = urljoin(PG_ARTICLES_INDEX_URL, link["href"])
+                absolute = urljoin(PG_ARTICLES_INDEX_URL, str(link["href"]))
                 parsed = urlparse(absolute)
                 if parsed.netloc.lower() not in {"paulgraham.com", "www.paulgraham.com"}:
                     continue
@@ -615,8 +719,9 @@ class PipelineOrchestrator:
         try:
             rss = RSSScraper(PG_RSS_URL)
             for item in rss.fetch_items():
-                if item.get("url"):
-                    urls.add(item["url"])
+                url = item.get("url")
+                if isinstance(url, str) and url:
+                    urls.add(url)
         except Exception as e:
             self._log(f"Warning: Failed to fetch PG RSS feed: {e}")
 
@@ -631,7 +736,7 @@ class PipelineOrchestrator:
         # Build URL-to-slug map for internal link processing
         url_to_slug: Dict[str, str] = {url: self._pg_slug(url) for url in urls}
 
-        audit_rows: List[Dict[str, str]] = []
+        audit_rows: list[Dict[str, Any]] = []
         fetched = 0
         skipped_existing = 0
         failed = 0
@@ -751,14 +856,18 @@ class PipelineOrchestrator:
         Falls back to archive HTML parsing if feed is unavailable.
         Returns list of (url, published_date) tuples sorted by date (oldest first).
         """
-        urls_with_dates = []
+        urls_with_dates: list[tuple[str, Optional[str]]] = []
 
         try:
             rss = RSSScraper(SA_ARTICLES_FEED_URL)
             items = rss.fetch_items()
             for item in items:
-                if item.get("url"):
-                    urls_with_dates.append((item["url"], item.get("date")))
+                url = item.get("url")
+                if isinstance(url, str) and url:
+                    date_value = item.get("date")
+                    urls_with_dates.append(
+                        (url, date_value if isinstance(date_value, str) else None)
+                    )
 
             if urls_with_dates:
                 self._log(f"fetched {len(urls_with_dates)} URLs from Atom feed")
@@ -782,7 +891,7 @@ class PipelineOrchestrator:
 
             soup = BeautifulSoup(content, "html.parser")
             for link in soup.find_all("a", href=True):
-                absolute = urljoin(SA_ARCHIVE_URL, link["href"])
+                absolute = urljoin(SA_ARCHIVE_URL, str(link["href"]))
                 parsed = urlparse(absolute)
                 if parsed.netloc.lower() not in {"blog.samaltman.com", "www.blog.samaltman.com"}:
                     continue
@@ -814,7 +923,7 @@ class PipelineOrchestrator:
         # Build URL-to-slug map for internal link processing
         url_to_slug: Dict[str, str] = {}
 
-        audit_rows: List[Dict[str, str]] = []
+        audit_rows: list[Dict[str, Any]] = []
         fetched = 0
         skipped_existing = 0
         failed = 0
@@ -850,7 +959,7 @@ class PipelineOrchestrator:
                     title = ""
                     og_title = soup.find("meta", property="og:title")
                     if og_title and og_title.get("content"):
-                        title = og_title["content"]
+                        title = str(og_title["content"])
 
                     if not title:
                         # Fallback to post-title h2 common on Posthaven
@@ -957,6 +1066,128 @@ class PipelineOrchestrator:
         self.write_unified_audit()
         return {"fetched": fetched, "skipped_existing": skipped_existing, "failed": failed}
 
+    def discover_blog(
+        self,
+        include_tags: Optional[List[str]] = None,
+        exclude_tags: Optional[List[str]] = None,
+        conditional_tags: Optional[List[str]] = None,
+        conditional_min_words: int = DEFAULT_YC_BLOG_CONDITIONAL_MIN_WORDS,
+        taxonomy_output: Optional[Path] = None,
+    ) -> int:
+        """Discover YC Blog metadata and persist taxonomy snapshot."""
+        include_values = include_tags or list(DEFAULT_YC_BLOG_INCLUDE_TAGS)
+        exclude_values = exclude_tags or list(DEFAULT_YC_BLOG_EXCLUDE_TAGS)
+        conditional_values = conditional_tags or list(DEFAULT_YC_BLOG_CONDITIONAL_TAGS)
+        self._log(f"discovering YC Blog metadata from Algolia ({self.blog_scraper.index_name})")
+        posts = self.blog_scraper.browse_all()
+        self._log(f"discovered {len(posts)} yc_blog posts")
+
+        facets = self.blog_scraper.browse_facets()
+        taxonomy_payload = {
+            "facets": facets,
+            "derived": build_taxonomy_from_posts(posts),
+            "include_tags": include_values,
+            "exclude_tags": exclude_values,
+            "conditional_tags": conditional_values,
+            "conditional_min_words": conditional_min_words,
+            "generated_at": datetime.now().isoformat(),
+        }
+        taxonomy_path = Path(taxonomy_output or self.yc_blog_taxonomy_path)
+        taxonomy_path.parent.mkdir(parents=True, exist_ok=True)
+        taxonomy_path.write_text(json.dumps(taxonomy_payload, indent=2))
+
+        saved = self.blog_scraper.save_posts(
+            posts,
+            str(self.yc_blog_metadata_path),
+            include_tags=include_values,
+            exclude_tags=exclude_values,
+            conditional_tags=conditional_values,
+            conditional_min_words=conditional_min_words,
+        )
+        self._log(
+            f"wrote {saved} filtered yc_blog metadata entries to " f"{self.yc_blog_metadata_path}"
+        )
+
+        for post in _load_metadata_posts(str(self.yc_blog_metadata_path)):
+            url = post.get("url") or ""
+            if not url:
+                continue
+            self.db.upsert_item(
+                url,
+                title=post.get("title", ""),
+                source_type=post.get("type") or post.get("source_type") or "article",
+                metadata_path=str(self.yc_blog_metadata_path),
+                stage="discover",
+                status="pending",
+                job_id=f"ycblog-{post.get('id') or _slugify(post.get('title') or 'post')}",
+            )
+
+        return saved
+
+    def extract_blog(
+        self,
+        force: bool = False,
+        limit: Optional[int] = None,
+        retry_failed_only: bool = False,
+    ) -> int:
+        """Extract YC Blog posts from yc_blog metadata manifest."""
+        self._log(f"loading yc_blog metadata from {self.yc_blog_metadata_path}")
+        posts: list[Dict[str, Any]] = []
+        seen_urls = set()
+        ignore_sources = load_ignore_sources()
+
+        for post in _load_metadata_posts(str(self.yc_blog_metadata_path)):
+            url = post.get("url") or ""
+            if not url or url in seen_urls:
+                continue
+            seen_urls.add(url)
+
+            post_id = post.get("id", _slugify(post.get("title", "post")))
+            post_title = post.get("title", "")
+            post_type = post.get("type") or post.get("source_type") or "article"
+            post_source = f"{url} {post_id} {post_title} {post_type}"
+            if is_ignored(post_source, ignore_sources):
+                continue
+
+            item = self.db.get_item(url)
+            status = (item or {}).get("status")
+            if not force and status in COMPLETED_STATUSES:
+                continue
+            if retry_failed_only and status not in RETRYABLE_STATUSES:
+                continue
+
+            posts.append(post)
+            if limit is not None and len(posts) >= limit:
+                break
+
+        if not posts:
+            self._log("no extractable yc_blog posts found")
+            return 0
+
+        self._log(f"extracting {len(posts)} yc_blog posts with {self.workers} workers")
+        completed = 0
+        with ThreadPoolExecutor(max_workers=self.workers) as executor:
+            futures = {
+                executor.submit(
+                    self._extract_one_with_context,
+                    post,
+                    self.blog_extractor,
+                    str(self.yc_blog_metadata_path),
+                    f"ycblog-{post.get('id') or _slugify(post.get('title', 'post'))}",
+                ): post.get("id")
+                for post in posts
+            }
+
+            for future in as_completed(futures):
+                result = future.result()
+                if result:
+                    completed += 1
+                self._log(f"yc_blog extracted {completed}/{len(posts)}")
+
+        self._log(f"finished yc_blog extraction: {completed}/{len(posts)} done")
+        self.write_unified_audit()
+        return completed
+
     def discover(self, run_id: Optional[str] = None) -> int:
         self._log("discovering metadata from Algolia")
         posts = self.scraper.browse_all()
@@ -1001,7 +1232,7 @@ class PipelineOrchestrator:
         input_dir = _slugify(self.metadata_dir.name.replace("_", "-"))
         date_key = datetime.now().strftime("%Y%m%d")
         filename = f"yc_content_runs_{date_key}.json"
-        run_summary = {
+        run_summary: Dict[str, Any] = {
             "type": run_type,
             "state": "done",
             "input_dir": input_dir,
@@ -1017,7 +1248,7 @@ class PipelineOrchestrator:
             "run_id": run_id,
         }
         output_path = SCRAPE_RUNS_DIR / filename
-        payload = {"date": date_key, "runs": []}
+        payload: Dict[str, Any] = {"date": date_key, "runs": []}
         if output_path.exists():
             try:
                 existing = json.loads(output_path.read_text())
@@ -1036,7 +1267,7 @@ class PipelineOrchestrator:
     def _build_run_summary(
         self, items: List[Dict[str, Any]], posts: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        summary = {
+        summary: Dict[str, Any] = {
             "done": 0,
             "missing": 0,
             "by_source_type": {},
@@ -1086,7 +1317,7 @@ class PipelineOrchestrator:
         retry_failed_only: bool = False,
     ) -> int:
         self._log(f"loading metadata from {self.metadata_dir}")
-        posts = []
+        posts: list[Dict[str, Any]] = []
         seen_urls = set()
         ignore_sources = load_ignore_sources()
 
@@ -1134,14 +1365,29 @@ class PipelineOrchestrator:
         return completed
 
     def _extract_one(self, post: Dict[str, Any]) -> bool:
+        return self._extract_one_with_context(
+            post=post,
+            extractor=self.extractor,
+            metadata_path=str(self.metadata_dir),
+        )
+
+    def _extract_one_with_context(
+        self,
+        post: Dict[str, Any],
+        extractor: ContentExtractor,
+        metadata_path: str,
+        job_id: Optional[str] = None,
+    ) -> bool:
         url = post.get("url") or ""
-        job_id = post.get("id") or _slugify(post.get("title", "post")) or _safe_filename(url)
+        resolved_job_id = (
+            job_id or post.get("id") or _slugify(post.get("title", "post")) or _safe_filename(url)
+        )
         source_type = post.get("type") or post.get("source_type") or "article"
 
-        result = self.extractor.extract_content(
-            url, job_id, source_type, media_url_hint=post.get("media_url")
+        result = extractor.extract_content(
+            url, resolved_job_id, source_type, media_url_hint=post.get("media_url")
         )
-        job_status = self.extractor.db.get_job_status(job_id) or {}
+        job_status = extractor.db.get_job_status(resolved_job_id) or {}
         status = job_status.get("status") or "error"
         canonical_source_type = job_status.get("source_type") or source_type
 
@@ -1154,8 +1400,8 @@ class PipelineOrchestrator:
             if result.published_at and not post.get("published_at"):
                 post["published_at"] = result.published_at
 
-            content_path = self.extractor.save_markdown(
-                job_id,
+            content_path = extractor.save_markdown(
+                resolved_job_id,
                 result.content,
                 post,
                 result.video_url or "",
@@ -1173,11 +1419,11 @@ class PipelineOrchestrator:
             url,
             title=post.get("title", ""),
             source_type=canonical_source_type,
-            metadata_path=str(self.metadata_dir),
+            metadata_path=metadata_path,
             content_path=content_path,
             stage="extract",
             status=status,
-            job_id=job_id,
+            job_id=resolved_job_id,
             media_url=media_url,
             word_count=word_count,
             content_words=content_words,
@@ -1202,7 +1448,7 @@ class PipelineOrchestrator:
     def write_unified_audit(self) -> str:
         """Unify all audits from 4 parts into a single CSV file."""
         self._log(f"generating unified audit: {UNIFIED_AUDIT_CSV}")
-        rows = []
+        rows: list[Dict[str, Any]] = []
         seen_urls = set()
 
         from .extractor import ExtractionDB
@@ -1222,8 +1468,8 @@ class PipelineOrchestrator:
 
             job_id = item.get("id")
             filename = item.get("file") or f"{job_id}.md"
-            local_path = SA_STARTUP_DIR / filename
-            is_done = local_path.exists()
+            local_path_path = SA_STARTUP_DIR / filename
+            is_done = local_path_path.exists()
 
             job_info = job_stats_by_url.get(url) or {}
             quality = job_info.get("quality") or ""
@@ -1239,7 +1485,7 @@ class PipelineOrchestrator:
                     "type": (item.get("type") or item.get("source_type") or "Article").title(),
                     "status": "done" if is_done else "missing",
                     "quality": quality,
-                    "local_path": str(local_path) if is_done else "",
+                    "local_path": str(local_path_path) if is_done else "",
                     "reason": "" if is_done else "Not yet extracted or copied",
                 }
             )
@@ -1300,7 +1546,40 @@ class PipelineOrchestrator:
                 }
             )
 
-        # 4. Process Extraction DB (YC Library)
+        # 4. Process YC Blog metadata
+        blog_meta_posts = _load_metadata_posts(str(self.yc_blog_metadata_path))
+        for item in blog_meta_posts:
+            if not item:
+                continue
+            url = item.get("url")
+            if not url or url in seen_urls:
+                continue
+
+            job_info = job_stats_by_url.get(url) or {}
+            status = (job_info.get("status") or "missing").lower()
+            quality = job_info.get("quality") or ""
+            filename = item.get("file") or f"{item.get('id')}.md"
+            local_path = self.yc_blog_dir / filename
+            if local_path.exists() and status == "missing":
+                status = "done"
+
+            seen_urls.add(url)
+            rows.append(
+                {
+                    "source": "YC Blog",
+                    "id": item.get("id"),
+                    "title": item.get("title"),
+                    "url": url,
+                    "source_url": item.get("media_url") or item.get("source_url") or url,
+                    "type": (item.get("type") or item.get("source_type") or "Article").title(),
+                    "status": status,
+                    "quality": quality,
+                    "local_path": str(local_path) if local_path.exists() else "",
+                    "reason": job_info.get("error_msg", ""),
+                }
+            )
+
+        # 5. Process Extraction DB (YC Library fallback)
         lib_meta_posts = _load_metadata_posts(str(self.metadata_dir))
         lib_meta_map = {p.get("url"): p for p in lib_meta_posts if p and p.get("url")}
 
@@ -1323,38 +1602,39 @@ class PipelineOrchestrator:
                 meta = lib_meta_map.get(url)
 
                 # Find local path
-                local_path = ""
+                local_path_str = ""
                 if status == "done":
                     # Use filename from metadata if available, otherwise job_id
                     filename = (meta.get("file") or f"{job_id}.md") if meta else f"{job_id}.md"
                     p = self.content_dir / filename
                     if p.exists():
-                        local_path = str(p)
+                        local_path_str = str(p)
 
                 seen_urls.add(url)
+                type_value = (
+                    meta.get("type")
+                    if meta and meta.get("type")
+                    else (
+                        meta.get("source_type")
+                        if meta and meta.get("source_type")
+                        else job.get("source_type", "article") or "article"
+                    )
+                )
                 rows.append(
                     {
                         "source": source,
                         "id": job_id,
-                        "title": meta.get("title") if meta else job_id,
+                        "title": meta.get("title") if meta and meta.get("title") else job_id,
                         "url": url,
                         "source_url": (
                             (meta.get("media_url") or meta.get("source_url") or url)
                             if meta
                             else url
                         ),
-                        "type": (
-                            meta.get("type")
-                            if meta
-                            else (
-                                None or meta.get("source_type")
-                                if meta
-                                else None or job.get("source_type", "article") or "article"
-                            )
-                        ).title(),
+                        "type": str(type_value).title(),
                         "status": status,
                         "quality": quality,
-                        "local_path": local_path,
+                        "local_path": local_path_str,
                         "reason": job.get("error_msg", ""),
                     }
                 )
@@ -1404,6 +1684,7 @@ def main():
         p.add_argument("--algolia-app-id")
         p.add_argument("--algolia-api-key")
         p.add_argument("--algolia-index", default="library_posts")
+        p.add_argument("--algolia-blog-index", default="blog_posts")
 
     # 'run' command (default)
     run_parser = subparsers.add_parser("run", help="Run pipeline discovery and extraction")
@@ -1425,6 +1706,26 @@ def main():
     full_parser.add_argument("--force", action="store_true", help="Force reprocessing")
     full_parser.add_argument(
         "--replay", action="store_true", help="Reprocess all items regardless of pipeline state"
+    )
+    full_parser.add_argument(
+        "--blog-include-tags",
+        nargs="*",
+        default=DEFAULT_YC_BLOG_INCLUDE_TAGS,
+    )
+    full_parser.add_argument(
+        "--blog-exclude-tags",
+        nargs="*",
+        default=DEFAULT_YC_BLOG_EXCLUDE_TAGS,
+    )
+    full_parser.add_argument(
+        "--blog-conditional-tags",
+        nargs="*",
+        default=DEFAULT_YC_BLOG_CONDITIONAL_TAGS,
+    )
+    full_parser.add_argument(
+        "--blog-conditional-min-words",
+        type=int,
+        default=DEFAULT_YC_BLOG_CONDITIONAL_MIN_WORDS,
     )
 
     # For backward compatibility: if first arg looks like a flag (starts with --),
@@ -1470,6 +1771,7 @@ def main():
         algolia_app_id=args.algolia_app_id,
         algolia_api_key=args.algolia_api_key,
         algolia_index=args.algolia_index,
+        algolia_blog_index=args.algolia_blog_index,
     )
 
     if args.command == "run":
@@ -1488,22 +1790,24 @@ def main():
             f"{result.get('excluded_audit', 0)} excluded items"
         )
     elif args.command == "full":
-        result = orchestrator.run_startup_school(
+        result = orchestrator.run_full(
             replay=args.replay,
             force=args.force,
+            blog_include_tags=getattr(args, "blog_include_tags", None),
+            blog_exclude_tags=getattr(args, "blog_exclude_tags", None),
+            blog_conditional_tags=getattr(args, "blog_conditional_tags", None),
+            blog_conditional_min_words=getattr(args, "blog_conditional_min_words", 300),
         )
         print("Full extraction complete:")
+        print(f"PG essays: {result.get('pg', {}).get('fetched', 0)} fetched")
+        print(f"SA essays: {result.get('sa', {}).get('fetched', 0)} fetched")
         print(
-            f"PG essays: {result.get('pg_fetched', 0)} fetched, "
-            f"{result.get('pg_failed', 0)} failed"
+            f"YC Library: {result.get('yc', {}).get('discovered', 0)} discovered, "
+            f"{result.get('yc', {}).get('extracted', 0)} extracted"
         )
         print(
-            f"SA essays: {result.get('sa_fetched', 0)} fetched, "
-            f"{result.get('sa_failed', 0)} failed"
-        )
-        print(
-            f"YC: {result.get('discovered', 0)} discovered, "
-            f"{result.get('extracted', 0)} extracted"
+            f"YC Blog: {result.get('yc_blog', {}).get('discovered', 0)} discovered, "
+            f"{result.get('yc_blog', {}).get('extracted', 0)} extracted"
         )
 
 

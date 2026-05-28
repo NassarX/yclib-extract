@@ -13,6 +13,7 @@ def test_config_from_explicit_args():
         algolia_app_id="test-app",
         algolia_api_key="test-key",
         algolia_index="test-index",
+        algolia_blog_index="blog-index",
         metadata_dir="/tmp/meta",
         content_dir="/tmp/content",
         min_content_length=1000,
@@ -23,6 +24,7 @@ def test_config_from_explicit_args():
     assert config.algolia_app_id == "test-app"
     assert config.algolia_api_key == "test-key"
     assert config.algolia_index == "test-index"
+    assert config.algolia_blog_index == "blog-index"
     assert config.metadata_dir == "/tmp/meta"
     assert config.content_dir == "/tmp/content"
     assert config.min_content_length == 1000
@@ -36,6 +38,7 @@ def test_config_from_defaults():
     assert config.algolia_app_id == "45BWZJ1SGC"
     assert config.algolia_api_key == Config.DEFAULT_ALGOLIA_API_KEY
     assert config.algolia_index == "Library_bookface_production"
+    assert config.algolia_blog_index == "ycdc_blog_production"
     assert config.min_content_length == 700
 
 
@@ -78,6 +81,7 @@ def test_config_to_dict():
     d = config.to_dict()
     assert "algolia_app_id" in d
     assert "algolia_api_key" in d
+    assert "algolia_blog_index" in d
     assert d["algolia_api_key"] == "***"  # API key masked
 
 
@@ -95,6 +99,7 @@ def test_config_save_to_env_file():
         content = env_path.read_text()
         assert "ALGOLIA_APP_ID=test-app" in content
         assert "ALGOLIA_API_KEY=test-key" in content
+        assert "ALGOLIA_BLOG_INDEX=ycdc_blog_production" in content
 
 
 def test_config_from_env():

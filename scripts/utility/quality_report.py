@@ -1,22 +1,31 @@
+#!/usr/bin/env python3
 """Generate quality report for the extracted library."""
 
-import csv
+import sys
 from collections import Counter
 from pathlib import Path
+
+# Add project root to sys.path before imports
+_project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(_project_root))
+sys.path.insert(0, str(_project_root / "src"))
+
+from scripts.shared import load_csv, OutputFormatter
 
 
 def generate_quality_report(audit_csv: str = "artifacts/resources_audit.csv"):
     """Print a summary of extraction quality across all sources."""
-    if not Path(audit_csv).exists():
-        print(f"Error: Audit file {audit_csv} not found.")
-        return
+    formatter = OutputFormatter()
+    
+    audit_path = Path(audit_csv)
+    if not audit_path.exists():
+        formatter.error(f"Audit file {audit_csv} not found.")
+        return 1
 
-    rows = []
-    with open(audit_csv, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        rows = list(reader)
-
-    print(f"--- Quality Report ({len(rows)} resources) ---\n")
+    rows = load_csv(audit_path)
+    
+    formatter.header(f"Quality Report ({len(rows)} resources)")
+    print()
 
     # 1. Quality Levels
     quality_counts = Counter(r["quality_level"] for r in rows)
@@ -40,7 +49,7 @@ def generate_quality_report(audit_csv: str = "artifacts/resources_audit.csv"):
     # 4. Warnings
     all_warnings = []
     for r in rows:
-        if r["warnings"]:
+        if r.get("warnings"):
             all_warnings.extend(w.strip() for w in r["warnings"].split(","))
 
     if all_warnings:
@@ -49,6 +58,9 @@ def generate_quality_report(audit_csv: str = "artifacts/resources_audit.csv"):
         for warn, count in warning_counts.most_common(5):
             print(f"  - {warn:20}: {count:4}")
 
+    print()
+    return 0
+
 
 if __name__ == "__main__":
-    generate_quality_report()
+    sys.exit(generate_quality_report())

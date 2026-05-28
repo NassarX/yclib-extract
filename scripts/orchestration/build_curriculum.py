@@ -20,6 +20,13 @@ from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
+# Add project root to sys.path before imports
+_project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(_project_root))
+sys.path.insert(0, str(_project_root / "src"))
+
+from scripts.shared import load_yaml, OutputFormatter
+
 try:
     import yaml
 except ImportError:
@@ -51,8 +58,7 @@ CONDITION_VERB = {
 
 
 def load_config(config_path: Path) -> dict:
-    with open(config_path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+    return load_yaml(config_path)
 
 
 def slugify(text: str) -> str:

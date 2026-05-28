@@ -3,7 +3,7 @@
 import csv
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 class UnifiedAudit:
@@ -27,7 +27,7 @@ class UnifiedAudit:
 
     def __init__(self, audit_path: str = "artifacts/resources_audit.csv"):
         self.audit_path = Path(audit_path)
-        self.entries: List[Dict] = []
+        self.entries: List[Dict[str, Any]] = []
 
     def add_entry(
         self,
@@ -78,7 +78,7 @@ class UnifiedAudit:
         Returns:
             Dict with counts by status, quality level, source
         """
-        stats = {
+        stats: Dict[str, Any] = {
             "total": len(self.entries),
             "by_status": {},
             "by_quality": {},

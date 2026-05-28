@@ -216,7 +216,7 @@ def extract_transcript_section(soup) -> Optional[str]:
     for tag, cls in patterns:
         elem = soup.find(tag, {"class": cls})
         if elem:
-            return elem.get_text(separator="\n").strip()
+            return str(elem.get_text(separator="\n").strip())
 
     return None
 
@@ -226,12 +226,13 @@ def extract_author_info(soup) -> Optional[str]:
     # Look for meta tags or author elements
     meta = soup.find("meta", {"name": "author"})
     if meta:
-        return meta.get("content")
+        content = meta.get("content")
+        return content if isinstance(content, str) else None
 
     # Try common author element classes
     author_elem = soup.find(["span", "div"], {"class": re.compile(r"author|creator")})
     if author_elem:
-        return author_elem.get_text().strip()
+        return str(author_elem.get_text().strip())
 
     return None
 
@@ -463,7 +464,8 @@ def generate_enriched_frontmatter(metadata: dict, content: str) -> str:
     frontmatter["extracted_at"] = datetime.now().isoformat()
     frontmatter["extraction_quality"] = metadata.get("quality", "unknown")
 
-    return "---\n" + yaml.dump(frontmatter, default_flow_style=False) + "---\n"
+    dumped = yaml.dump(frontmatter, default_flow_style=False)
+    return f"---\n{str(dumped)}---\n"
 
 
 def extract_footnotes_from_html(html: str) -> tuple:
@@ -489,7 +491,7 @@ def extract_footnotes_from_html(html: str) -> tuple:
     ):
         for item in container.find_all(["li", "p"]):
             # Extract ID
-            item_id = item.get("id", "")
+            item_id = str(item.get("id", ""))
             match = footnote_pattern.search(item_id)
             if match:
                 fn_id = match.group(1)

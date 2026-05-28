@@ -8,6 +8,10 @@ This context defines the canonical language for generating and maintaining extra
 JSON files in `artifacts/metadata/` that define the intended state and instructions for extraction. This is the source of truth for what resources should exist and where they come from.
 _Avoid_: audit file, db
 
+**Taxonomy Snapshot**:
+A JSON snapshot (for example `artifacts/metadata/yc_blog_taxonomy.json`) that reports discovered category/tag values and counts. It informs filtering policy but does not itself define extraction intent.
+_Avoid_: final metadata manifest, extraction state
+
 **Unified Audit**:
 A single CSV file (`artifacts/resources_audit.csv`) acting as a historical record of the last pipeline execution across all sources. It reports on extraction success but does not dictate intended state.
 _Avoid_: metadata, database
@@ -47,6 +51,10 @@ _Avoid_: failed-status-for-partial-success, hidden-short-content
 **Weekly Mode**:
 Production-oriented pipeline behavior that is append-only: existing local artifacts are preserved and only missing resources are backfilled.
 _Avoid_: refresh mode, overwrite mode
+
+**Tag Filter Precedence**:
+When both allowlist and denylist tags apply to the same resource, denylist wins and the resource is excluded.
+_Avoid_: include-wins conflict handling
 
 **Dev Replay**:
 Testing-oriented pipeline behavior (`--mode dev --replay`) that can force reprocessing to validate workflow behavior without changing weekly production policy.

@@ -10,6 +10,7 @@ The toolkit orchestrates extraction across four primary sources:
 2. **Sam Altman Essays**: Extracts blog posts from blog.samaltman.com. Includes Atom feed discovery and layout-specific content extraction.
 3. **YC Library**: Discovers and extracts hundreds of public articles, videos, and podcasts via the Algolia-backed Y Combinator Library.
 4. **Startup School**: Assembles a curated, standalone curriculum directory by matching curriculum requirements against extracted assets, complete with fallback YouTube transcript recovery.
+5. **YC Blog (tag-filtered)**: Supports Algolia-backed YC Blog discovery with taxonomy snapshots and allowlist/denylist filtering (denylist precedence). *Note: The public YC Blog Algolia API has ACL restrictions. If API access fails, the tool automatically falls back to RSS feed (limited to 15 recent announcements). For full blog content access, consider providing custom Algolia credentials.*
 
 ## Installation
 
@@ -50,6 +51,9 @@ yclib-extract fetch altman
 
 # Build the standalone Startup School curriculum directory
 yclib-extract build startup-school --ensure-local --cleanup-orphans
+
+# YC Blog PoC: discover taxonomy + save filtered metadata
+yclib-extract scrape-blog --taxonomy-output artifacts/metadata/yc_blog_taxonomy.json
 ```
 
 *Note: The pipeline uses an append-only mode by default. Append `--force` to any command to overwrite existing files and force a fresh extraction.*
@@ -61,6 +65,7 @@ All extracted content is saved to the `artifacts/` directory:
 - `artifacts/pg_essays/` — Paul Graham essays.
 - `artifacts/sam_altman_essays/` — Sam Altman essays.
 - `artifacts/yc_library/` — YC Library resources.
+- `artifacts/yc_blog/` — YC Blog resources.
 - `artifacts/yc_startup_school/` — Standalone Startup School curriculum.
 - `artifacts/resources_audit.csv` — A unified audit detailing the success and quality metrics of every extracted file.
 

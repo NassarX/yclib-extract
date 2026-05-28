@@ -30,7 +30,7 @@ def check_file_integrity(audit_csv: str = "artifacts/resources_audit.csv") -> Di
 
 def find_duplicate_slugs(metadata_dir: str = "artifacts/metadata") -> List[str]:
     """Identify duplicate IDs/slugs across different metadata sources."""
-    slug_map = {}
+    slug_map: Dict[str, str] = {}
     duplicates = []
 
     for meta_file in Path(metadata_dir).glob("*.json"):

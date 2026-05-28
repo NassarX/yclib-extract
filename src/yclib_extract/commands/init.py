@@ -5,6 +5,7 @@ Guides users through:
 2. Transcript support preference
 3. Validation and .env file generation
 """
+
 from ..config import Config
 
 
