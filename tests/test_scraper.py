@@ -1,6 +1,12 @@
 import json
 
-from yclib_extract.scraper import AlgoliaScraper
+from yclib_extract.scraper import (
+    AlgoliaScraper,
+    build_taxonomy_from_posts,
+    classify_by_tag_cascade,
+    passes_conditional_content_filter,
+    should_include_by_tags,
+)
 
 
 def test_normalize_hit_supports_multiple_url_fields():
@@ -187,3 +193,94 @@ def test_scraper_cli_args_override_config():
     scraper = AlgoliaScraper(app_id="cli-app", config=config)
     assert scraper.app_id == "cli-app"
     assert scraper.api_key == "config-key"
+
+
+def test_should_include_by_tags_exclusion_precedence():
+    record = {
+        "tags": ["Essay"],
+        "categories": ["Startup School"],
+        "subcategories": ["YC News"],
+    }
+    assert (
+        should_include_by_tags(
+            record,
+            include_tags=["Essay", "Startup School"],
+            exclude_tags=["YC News"],
+        )
+        is False
+    )
+
+
+def test_build_taxonomy_from_posts_counts_normalized_values():
+    taxonomy = build_taxonomy_from_posts(
+        [
+            {"tags": ["Founder Stories", "Essay"]},
+            {"tags": ["founder stories"], "categories": ["Startup School"]},
+            {"subcategories": ["YC Events"]},
+        ]
+    )
+    assert taxonomy["counts"]["tags"]["founder stories"] == 2
+    assert taxonomy["counts"]["categories"]["startup school"] == 1
+    assert taxonomy["counts"]["subcategories"]["yc events"] == 1
+
+
+def test_classify_by_tag_cascade_respects_exclude_include_conditional():
+    excluded = {"tags": ["essay", "yc news"]}
+    included = {"tags": ["advice"]}
+    conditional = {"tags": ["office hours", "founder stories"]}
+    skipped = {"tags": ["unknown-tag"]}
+
+    assert (
+        classify_by_tag_cascade(
+            excluded,
+            include_tags=["advice", "essay"],
+            exclude_tags=["yc news"],
+            conditional_tags=["office hours", "founder stories"],
+        )
+        == "exclude"
+    )
+    assert (
+        classify_by_tag_cascade(
+            included,
+            include_tags=["advice", "essay"],
+            exclude_tags=["yc news"],
+            conditional_tags=["office hours", "founder stories"],
+        )
+        == "include"
+    )
+    assert (
+        classify_by_tag_cascade(
+            conditional,
+            include_tags=["advice", "essay"],
+            exclude_tags=["yc news"],
+            conditional_tags=["office hours", "founder stories"],
+        )
+        == "conditional"
+    )
+    assert (
+        classify_by_tag_cascade(
+            skipped,
+            include_tags=["advice", "essay"],
+            exclude_tags=["yc news"],
+            conditional_tags=["office hours", "founder stories"],
+        )
+        == "skip"
+    )
+
+
+def test_passes_conditional_content_filter(monkeypatch):
+    class FakeResp:
+        def __init__(self, text):
+            self.text = text
+
+        def raise_for_status(self):
+            return None
+
+    positive_text = "<main>" + ("startup growth leadership product advice " * 80) + "</main>"
+    negative_text = "<main>" + ("apply deadline event schedule date " * 80) + "</main>"
+
+    monkeypatch.setattr("yclib_extract.scraper.requests.get", lambda *_args, **_kwargs: FakeResp(positive_text))
+    assert passes_conditional_content_filter("https://example.com/a", min_words=300) is True
+
+    monkeypatch.setattr("yclib_extract.scraper.requests.get", lambda *_args, **_kwargs: FakeResp(negative_text))
+    assert passes_conditional_content_filter("https://example.com/b", min_words=300) is False

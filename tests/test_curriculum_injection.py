@@ -36,7 +36,7 @@ modules:
     result = run_cmd(
         [
             sys.executable,
-            "scripts/build_curriculum.py",
+            "scripts/orchestration/build_curriculum.py",
             "--inject-only",
             "--config",
             str(config_path),

@@ -236,3 +236,47 @@ def test_write_unified_audit_collects_all_sources(tmp_path, monkeypatch):
     ss_row = next(r for r in rows if r["source"] == "Startup School")
     assert ss_row["status"] == "done"
     assert ss_row["source_url"] == "https://youtube.com/v1"
+
+
+def test_discover_blog_writes_taxonomy_and_applies_exclusion_precedence(tmp_path):
+    artifacts_dir = tmp_path / "artifacts"
+    metadata_dir = artifacts_dir / "metadata"
+    metadata_dir.mkdir(parents=True)
+    yc_dir = artifacts_dir / "yc_library"
+    yc_dir.mkdir()
+
+    orchestrator = PipelineOrchestrator(
+        metadata_dir=str(metadata_dir / "yc_library_metadata.json"),
+        content_dir=str(yc_dir),
+        db_path=str(artifacts_dir / "extraction_jobs.db"),
+    )
+    orchestrator.yc_blog_metadata_path = metadata_dir / "yc_blog_metadata.json"
+    taxonomy_path = metadata_dir / "yc_blog_taxonomy.json"
+
+    orchestrator.blog_scraper.browse_all = lambda: [
+        {
+            "objectID": "1",
+            "shared_search_path": "/blog/kept",
+            "title": "Kept Essay",
+            "tags": ["Essay"],
+        },
+        {
+            "objectID": "2",
+            "shared_search_path": "/blog/excluded",
+            "title": "Excluded Essay",
+            "tags": ["Essay", "YC News"],
+        },
+    ]
+    orchestrator.blog_scraper.browse_facets = lambda: {"tags": {"essay": 2, "yc news": 1}}
+
+    saved = orchestrator.discover_blog(
+        include_tags=["Essay"],
+        exclude_tags=["YC News"],
+        taxonomy_output=taxonomy_path,
+    )
+
+    assert saved == 1
+    assert taxonomy_path.exists()
+    data = json.loads(orchestrator.yc_blog_metadata_path.read_text())
+    assert len(data["posts"]) == 1
+    assert data["posts"][0]["title"] == "Kept Essay"
