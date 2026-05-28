@@ -279,8 +279,12 @@ def test_passes_conditional_content_filter(monkeypatch):
     positive_text = "<main>" + ("startup growth leadership product advice " * 80) + "</main>"
     negative_text = "<main>" + ("apply deadline event schedule date " * 80) + "</main>"
 
-    monkeypatch.setattr("yclib_extract.scraper.requests.get", lambda *_args, **_kwargs: FakeResp(positive_text))
+    monkeypatch.setattr(
+        "yclib_extract.scraper.requests.get", lambda *_args, **_kwargs: FakeResp(positive_text)
+    )
     assert passes_conditional_content_filter("https://example.com/a", min_words=300) is True
 
-    monkeypatch.setattr("yclib_extract.scraper.requests.get", lambda *_args, **_kwargs: FakeResp(negative_text))
+    monkeypatch.setattr(
+        "yclib_extract.scraper.requests.get", lambda *_args, **_kwargs: FakeResp(negative_text)
+    )
     assert passes_conditional_content_filter("https://example.com/b", min_words=300) is False

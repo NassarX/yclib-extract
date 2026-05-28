@@ -13,16 +13,12 @@ from typing import Dict, List, Set
 TAG_SEMANTIC_GROUPS: Dict[str, List[str]] = {
     # Video content variations
     "video": ["video", "videos"],
-    
     # Startup School variations
     "startup-school": ["startup-school", "hash-startup-school"],
-    
     # Jobs variations
     "jobs": ["jobs", "hash-jobs"],
-    
     # Gender diversity in founders (normalize both to one canonical)
     "female-founders": ["female-founders", "women-founders"],
-    
     # YC Continuity program
     "yc-continuity": ["yc-continuity", "hash-ycc"],
 }
@@ -36,7 +32,7 @@ for canonical, variants in TAG_SEMANTIC_GROUPS.items():
 
 def get_canonical_tag(tag_slug: str) -> str:
     """Return the canonical form of a tag slug.
-    
+
     Examples:
         "videos" → "video"
         "women-founders" → "female-founders"
@@ -47,35 +43,35 @@ def get_canonical_tag(tag_slug: str) -> str:
 
 def normalize_tag_variants(tags: List[Dict[str, str]]) -> List[Dict[str, str]]:
     """Normalize a list of tags by mapping variants to canonical forms.
-    
+
     Removes duplicates after canonicalization.
-    
+
     Args:
         tags: List of tag dicts with 'slug' and 'name' keys
-    
+
     Returns:
         List of deduplicated tag dicts with canonical slugs
     """
     seen_canonical: Set[str] = set()
     result: List[Dict[str, str]] = []
-    
+
     for tag in tags:
         slug = tag.get("slug", "")
         canonical = get_canonical_tag(slug)
-        
+
         if canonical and canonical not in seen_canonical:
             seen_canonical.add(canonical)
             # Return a new dict with canonical slug
             canonical_tag = dict(tag)
             canonical_tag["slug"] = canonical
             result.append(canonical_tag)
-    
+
     return result
 
 
 def get_all_variant_slugs_for_canonical(canonical: str) -> List[str]:
     """Get all variant slugs that map to a canonical form.
-    
+
     Examples:
         "video" → ["video", "videos"]
         "female-founders" → ["female-founders", "women-founders"]
@@ -89,12 +85,12 @@ if __name__ == "__main__":
     print("\nCanonical → Variants:")
     for canonical, variants in TAG_SEMANTIC_GROUPS.items():
         print(f"  {canonical:25} ← {variants}")
-    
+
     print("\n\nVariant → Canonical:")
     for variant, canonical in sorted(_VARIANT_TO_CANONICAL.items()):
         if variant != canonical:
             print(f"  {variant:25} → {canonical}")
-    
+
     # Test normalization
     print("\n\nTest normalize_tag_variants():")
     test_tags = [

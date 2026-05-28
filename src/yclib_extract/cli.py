@@ -14,7 +14,6 @@ from .scraper import (
     DEFAULT_YC_BLOG_INCLUDE_TAGS,
     YCBlogScraper,
     build_clean_taxonomy_from_posts,
-    build_taxonomy_from_posts,
     clean_metadata_record,
 )
 
@@ -210,13 +209,13 @@ def main():
 
         scraper = YCBlogScraper(**scraper_kwargs)
         print(f"Discovering YC Blog posts from Algolia ({scraper.index_name})...")
-        
+
         try:
             posts = scraper.browse_all()
         except Exception as e:
             print(f"⚠ Algolia failed ({e}), falling back to RSS feed + scraping...")
             posts = scraper.browse_all_from_rss()
-        
+
         print(f"Found {len(posts)} blog posts")
 
         taxonomy_payload = build_clean_taxonomy_from_posts(posts)

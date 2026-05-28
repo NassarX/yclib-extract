@@ -114,7 +114,7 @@ def collect_taxonomy_values(record: Dict[str, Any]) -> list[str]:
 
 def collect_tag_slugs(record: Dict[str, Any]) -> list[str]:
     """Extract tag/category slugs from a record (prefer slug over name).
-    
+
     Handles both dict format (with slug/name fields) and string format (backward compat).
     """
     slugs = []
@@ -138,7 +138,7 @@ def collect_tag_slugs(record: Dict[str, Any]) -> list[str]:
 
 def clean_metadata_record(record: Dict[str, Any]) -> Dict[str, Any]:
     """Remove null/empty fields from tags and categories only.
-    
+
     For tags/categories: keep only {name, slug, url}
     - Convert hash-{non-numeric} to {non-numeric} (e.g., hash-jobs → jobs)
     - Exclude hash-{numeric} tags (e.g., hash-25267)
@@ -149,11 +149,11 @@ def clean_metadata_record(record: Dict[str, Any]) -> Dict[str, Any]:
         if key in ("tags", "categories"):
             # For tags/categories, keep only clean dict entries with name/slug/url
             if isinstance(value, list):
-                clean_items = []
+                clean_items: list[dict[Any, Any] | str] = []
                 for item in value:
                     if isinstance(item, dict):
                         slug = item.get("slug", "")
-                        
+
                         # Handle hash tags
                         if slug and slug.startswith("hash-"):
                             hash_content = slug[5:]  # Remove "hash-" prefix
@@ -162,15 +162,16 @@ def clean_metadata_record(record: Dict[str, Any]) -> Dict[str, Any]:
                                 continue
                             # Convert hash-{content} to {content} (e.g., hash-jobs → jobs)
                             slug = hash_content
-                        
+
                         clean_item = {
-                            k: v for k, v in item.items()
+                            k: v
+                            for k, v in item.items()
                             if v is not None and k in ("name", "slug", "url")
                         }
                         # Update slug in clean_item
                         if clean_item and slug:
                             clean_item["slug"] = slug
-                        
+
                         if clean_item:
                             clean_items.append(clean_item)
                     elif isinstance(item, str) and item:
@@ -189,7 +190,7 @@ def build_clean_taxonomy_from_posts(posts: list[Dict[str, Any]]) -> Dict[str, An
     """Build a clean taxonomy of tags and categories with slug focus."""
     tags_map: Dict[str, Dict[str, str]] = {}
     categories_map: Dict[str, Dict[str, str]] = {}
-    
+
     for post in posts:
         # Extract tags
         tags = post.get("tags", [])
@@ -201,7 +202,7 @@ def build_clean_taxonomy_from_posts(posts: list[Dict[str, Any]]) -> Dict[str, An
                     if slug and name:
                         if slug not in tags_map:
                             tags_map[slug] = {"slug": slug, "name": name}
-        
+
         # Extract categories
         categories = post.get("categories", [])
         if isinstance(categories, list):
@@ -212,7 +213,7 @@ def build_clean_taxonomy_from_posts(posts: list[Dict[str, Any]]) -> Dict[str, An
                     if slug and name:
                         if slug not in categories_map:
                             categories_map[slug] = {"slug": slug, "name": name}
-    
+
     return {
         "tags": dict(sorted(tags_map.items())),
         "categories": dict(sorted(categories_map.items())),
@@ -230,10 +231,10 @@ def should_include_by_tags(
     """
     include_set = {normalize_tag(tag) for tag in include_tags if tag}
     exclude_set = {normalize_tag(tag) for tag in exclude_tags if tag}
-    
+
     # Extract slugs from record (prefer slug over name)
     record_slugs = {normalize_tag(slug) for slug in collect_tag_slugs(record) if slug}
-    
+
     if record_slugs & exclude_set:
         return False
     if not include_set:
@@ -248,7 +249,7 @@ def classify_by_tag_cascade(
     conditional_tags: Iterable[str],
 ) -> str:
     """Classify a post by exclude/include/conditional tag cascade using normalized slug matching.
-    
+
     Normalizes both filter tags and post slugs before comparison to handle:
     - Filter: "hacker news" (spaces) → Normalized: "hacker news"
     - Post slug: "hacker-news" (dashes) → Normalized: "hacker news"
@@ -258,7 +259,7 @@ def classify_by_tag_cascade(
     include_set = {normalize_tag(tag) for tag in include_tags if tag}
     exclude_set = {normalize_tag(tag) for tag in exclude_tags if tag}
     conditional_set = {normalize_tag(tag) for tag in conditional_tags if tag}
-    
+
     # Extract and normalize slugs from record (prefer slug over name)
     record_slugs = {normalize_tag(slug) for slug in collect_tag_slugs(record) if slug}
 
@@ -305,7 +306,7 @@ def classify_by_content(
     exclude_keywords: Optional[list[str]] = None,
 ) -> str:
     """Classify a post by analyzing its content when tag metadata is unavailable.
-    
+
     Returns: "include", "exclude", or "skip"
     """
     if include_keywords is None:
@@ -682,11 +683,12 @@ class AlgoliaScraper:
                         exclude_tags=exclude_values,
                         conditional_tags=conditional_values,
                     )
-                    
-                    # If tag cascade returns "skip" (no tags matched), try content-based classification
+
+                    # If tag cascade returns "skip" (no tags matched),
+                    # try content-based classification
                     if decision == "skip" and post.get("content"):
                         decision = classify_by_content(post)
-                    
+
                     if decision == "exclude" or decision == "skip":
                         continue
                     if decision == "conditional":
@@ -697,7 +699,8 @@ class AlgoliaScraper:
                 normalized["file"] = f"{normalized['id']}.md"
                 if not normalized.get("source_url"):
                     normalized["source_url"] = normalized.get("media_url") or normalized["url"]
-                # Clean metadata before saving (remove null fields and keep only id/name/slug for tags)
+                # Clean metadata before saving (remove null fields and keep only
+                # id/name/slug for tags)
                 cleaned = clean_metadata_record(normalized)
                 consolidated.append(cleaned)
                 saved += 1
@@ -815,7 +818,7 @@ class YCBlogScraper(AlgoliaScraper):
         """Normalize Algolia hit to post metadata for blog posts."""
         # For blog posts, construct URL with /blog/ path
         page_url = hit.get("shared_search_path") or hit.get("slug") or hit.get("url")
-        
+
         if page_url:
             # Ensure it starts with a slash
             if not page_url.startswith("/"):
@@ -825,7 +828,7 @@ class YCBlogScraper(AlgoliaScraper):
                 page_url = "/blog" + page_url
             # Convert to full URL
             page_url = f"https://www.ycombinator.com{page_url}"
-        
+
         media_url = hit.get("link") or hit.get("url")
         if media_url:
             if not _is_media_url(media_url):
@@ -878,7 +881,7 @@ class YCBlogScraper(AlgoliaScraper):
                     continue
 
                 objectid = link.split("/")[-1].rstrip("/") or "unknown"
-                post_data: Dict[str, str | None] = {
+                post_data: Dict[str, Any] = {
                     "objectID": objectid,
                     "post_title": title,
                     "url": link,
@@ -890,18 +893,22 @@ class YCBlogScraper(AlgoliaScraper):
                     post_resp.raise_for_status()
                     post_soup = BeautifulSoup(post_resp.content, "html.parser")
 
-                    all_tags = set(post_data.get("tags", []))
+                    all_tags: set[str] = set(post_data.get("tags", []) or [])
 
                     meta_tags = post_soup.find_all("meta", {"property": "article:tag"})
                     for tag in meta_tags:
-                        content = tag.get("content", "").strip()
-                        if content:
-                            all_tags.add(content)
+                        content = tag.get("content")
+                        if isinstance(content, str):
+                            content_str = content.strip()
+                            if content_str:
+                                all_tags.add(content_str)
 
                     meta_keywords = post_soup.find("meta", {"name": "keywords"})
-                    if meta_keywords and meta_keywords.get("content"):
-                        keywords = [t.strip() for t in meta_keywords["content"].split(",") if t.strip()]
-                        all_tags.update(keywords)
+                    if meta_keywords:
+                        content = meta_keywords.get("content")
+                        if isinstance(content, str):
+                            keywords = [t.strip() for t in content.split(",") if t.strip()]
+                            all_tags.update(keywords)
 
                     json_ld = post_soup.find("script", {"type": "application/ld+json"})
                     if json_ld and json_ld.string:
@@ -911,7 +918,9 @@ class YCBlogScraper(AlgoliaScraper):
                                 if "keywords" in ld_data:
                                     kw = ld_data["keywords"]
                                     if isinstance(kw, str):
-                                        all_tags.update([t.strip() for t in kw.split(",") if t.strip()])
+                                        all_tags.update(
+                                            [t.strip() for t in kw.split(",") if t.strip()]
+                                        )
                                     elif isinstance(kw, list):
                                         all_tags.update(kw)
                         except Exception:
@@ -924,14 +933,14 @@ class YCBlogScraper(AlgoliaScraper):
                     post_data["content"] = article_content[:10000]
                     post_data["tags"] = list(all_tags)
 
-                except Exception as e:
+                except Exception:
                     pass
 
                 posts.append(post_data)
 
             return posts
 
-        except Exception as e:
+        except Exception:
             return []
 
 

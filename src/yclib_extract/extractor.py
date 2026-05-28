@@ -12,8 +12,8 @@ import requests
 from bs4 import BeautifulSoup
 
 from .lib.html_cleaning import extract_main_content, extract_page_metadata, html_to_markdown
-from .lib.youtube_transcripts import extract_podcast_url, extract_youtube_url, get_transcript
 from .lib.tag_defaults import build_tags_for_resource
+from .lib.youtube_transcripts import extract_podcast_url, extract_youtube_url, get_transcript
 from .scraper import _slugify, is_ignored, load_ignore_sources
 
 ARTIFACTS_DIR = Path("artifacts").resolve()

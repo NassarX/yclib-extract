@@ -256,7 +256,8 @@ def test_main_scrape_blog_writes_taxonomy_and_filtered_posts(monkeypatch, tmp_pa
 
     monkeypatch.setattr("yclib_extract.cli.YCBlogScraper", FakeBlogScraper)
     monkeypatch.setattr(
-        "yclib_extract.cli.build_clean_taxonomy_from_posts", lambda posts: {"tags": {}, "categories": {}, "total_posts": 1}
+        "yclib_extract.cli.build_clean_taxonomy_from_posts",
+        lambda posts: {"tags": {}, "categories": {}, "total_posts": 1},
     )
     out_meta = tmp_path / "yc_blog_metadata.json"
     out_tax = tmp_path / "yc_blog_taxonomy.json"

@@ -58,7 +58,10 @@ class Config:
     )
     DEFAULT_ALGOLIA_INDEX = "Library_bookface_production"
     DEFAULT_ALGOLIA_BLOG_API_KEY = (
-        "MGRmNGJlOWM2M2E2NmI2NzdlZGZmMTU3MDZiMGZiNDFhOWM0M2QwNmExZjIxNDZlMWQwOWQzMWE3MzRkMjYzMmFuYWx5dGljc1RhZ3M9eWNkYyZyZXN0cmljdEluZGljZXM9eWNkY19ibG9nX3Byb2R1Y3Rpb24mdGFnRmlsdGVycz0lNUIlMjJ5Y2RjX3B1YmxpYyUyMiU1RA=="
+        "MGRmNGJlOWM2M2E2NmI2NzdlZGZmMTU3MDZiMGZiNDFhOWM0M2QwNmEx"
+        "ZjIxNDZlMWQwOWQzMWE3MzRkMjYzMmFuYWx5dGljc1RhZ3M9eWNkYyZy"
+        "ZXN0cmljdEluZGljZXM9eWNkY19ibG9nX3Byb2R1Y3Rpb24mdGFnRmlsd"
+        "GVycz0lNUIlMjJ5Y2RjX3B1YmxpYyUyMiU1RA=="
     )
     DEFAULT_ALGOLIA_BLOG_INDEX = "ycdc_blog_production"
 
@@ -105,9 +108,7 @@ class Config:
             algolia_index or os.getenv("ALGOLIA_INDEX") or self.DEFAULT_ALGOLIA_INDEX
         )
         self.algolia_blog_index = (
-            algolia_blog_index
-            or os.getenv("ALGOLIA_BLOG_INDEX")
-            or self.DEFAULT_ALGOLIA_BLOG_INDEX
+            algolia_blog_index or os.getenv("ALGOLIA_BLOG_INDEX") or self.DEFAULT_ALGOLIA_BLOG_INDEX
         )
         self.algolia_blog_api_key = (
             os.getenv("ALGOLIA_BLOG_API_KEY") or self.DEFAULT_ALGOLIA_BLOG_API_KEY
