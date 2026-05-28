@@ -13,6 +13,7 @@ from bs4 import BeautifulSoup
 
 from .lib.html_cleaning import extract_main_content, extract_page_metadata, html_to_markdown
 from .lib.youtube_transcripts import extract_podcast_url, extract_youtube_url, get_transcript
+from .lib.tag_defaults import build_tags_for_resource
 from .scraper import _slugify, is_ignored, load_ignore_sources
 
 ARTIFACTS_DIR = Path("artifacts").resolve()
@@ -28,6 +29,7 @@ FRONTMATTER_FIELDS = (
     "type",
     "author",
     "summary",
+    "tags",
     "published_at",
     "revised_at",
     "exported_at",
@@ -399,6 +401,33 @@ class ContentExtractor:
                 frontmatter["published_at"] = frontmatter["date"]
             frontmatter["exported_at"] = datetime.now().isoformat()
             frontmatter["file"] = frontmatter.get("file") or filename
+
+            # Ensure mandatory tags field with proper defaults
+            # Priority: tags_yaml (from enriched metadata) > tags (from metadata) > build defaults
+            if "tags_yaml" in frontmatter and isinstance(frontmatter.get("tags_yaml"), list):
+                # Use pre-enriched tags from metadata
+                frontmatter["tags"] = frontmatter["tags_yaml"]
+            else:
+                # Extract tags and build with defaults
+                metadata_tags = frontmatter.get("tags", [])
+                if isinstance(metadata_tags, list):
+                    # Filter out tag objects, extract slugs only
+                    clean_tags = []
+                    for tag in metadata_tags:
+                        if isinstance(tag, dict) and "slug" in tag:
+                            clean_tags.append(tag["slug"])
+                        elif isinstance(tag, str):
+                            clean_tags.append(tag)
+                    metadata_tags = clean_tags
+                else:
+                    metadata_tags = []
+
+                source_type_for_tags = source_type or frontmatter.get("source_type", "yc-library")
+                frontmatter["tags"] = build_tags_for_resource(
+                    resource_type="article",
+                    source_type=source_type_for_tags,
+                    metadata_tags=metadata_tags,
+                )
 
             body = content.strip()
             title = metadata.get("title")

@@ -1,0 +1,93 @@
+# Tag Normalization & Semantic Grouping Configuration
+# 
+# This file defines:
+# 1. Semantic duplicates: Tags that represent the same concept but use different names/formats
+# 2. Canonical forms: The preferred slug for a group of similar tags
+# 3. Exclusion rules: Tags that should be completely removed from filtering
+
+semantic_groups:
+  # Video content
+  video:
+    canonical: video
+    variants:
+      - video
+      - videos
+    reason: "Both 'video' and 'videos' represent video content"
+
+  # Startup School program
+  startup_school:
+    canonical: startup-school
+    variants:
+      - startup-school
+      - hash-startup-school
+    reason: "Both refer to YC's Startup School program"
+
+  # Jobs postings
+  jobs:
+    canonical: jobs
+    variants:
+      - jobs
+      - hash-jobs
+    reason: "Both refer to YC job listings"
+
+  # Founder gender diversity initiatives
+  founders_diversity:
+    canonical: female-founders
+    variants:
+      - female-founders
+      - women-founders
+    reason: "Both represent diversity in founder demographics"
+
+  # YC Continuity program
+  yc_continuity:
+    canonical: yc-continuity
+    variants:
+      - yc-continuity
+      - hash-ycc
+    reason: "hash-ycc is shorthand for YC Continuity program"
+
+# Website/Platform references that are semantic categories, not just topic names
+# These should be in the exclude list to avoid external platform content
+platform_exclusions:
+  hacker_news:
+    slug: hacker-news
+    name: "Hacker News"
+    reason: "Refers to the Hacker News website/platform, not generic 'hacker' topics"
+    recommendation: "Add to exclude list to filter out content cross-posted from HN"
+
+# Company/Product-specific tags that may be outdated or off-topic
+company_product_tags:
+  dropbox:
+    slug: dropbox
+    name: "Dropbox"
+    reason: "Company-specific content, may be dated"
+  gitlab:
+    slug: gitlab
+    name: "Gitlab"
+    reason: "Product-specific content"
+
+# Purely numeric hash tags that are internal IDs with no semantic meaning
+numeric_hashes:
+  pattern: "hash-[0-9]+"
+  action: "EXCLUDE"
+  reason: "Internal post IDs (e.g., hash-25267) with no semantic value - always exclude"
+  count: "~116 tags"
+
+# Regional/Topic tags that may become stale
+potential_stale_tags:
+  - blockchain      # Hot topic circa 2017-2022
+  - ai              # Hot topic, constantly evolving
+  - china           # Region-specific
+  - africa          # Region-specific
+  - edtech          # Vertical-specific, dated
+  - healthcare      # Vertical-specific, dated
+  reason: "May represent time-bound or vertical-specific content"
+
+# Metadata-level tag cleanups
+tag_field_cleanup:
+  - remove_null_fields: true
+    description: "Only keep: name, slug, url"
+  - remove_numeric_hashes: true
+    description: "Remove hash-[0-9]+ tags completely"
+  - normalize_spacing: true
+    description: "Convert dashes to spaces in normalized form"
