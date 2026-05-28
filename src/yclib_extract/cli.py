@@ -1,8 +1,22 @@
 import argparse
+import json
 import sys
 from pathlib import Path
 
 from . import __version__
+from .config import Config
+from .scraper import (
+    DEFAULT_BLOG_METADATA_DIR,
+    DEFAULT_BLOG_TAXONOMY_FILE,
+    DEFAULT_YC_BLOG_CONDITIONAL_MIN_WORDS,
+    DEFAULT_YC_BLOG_CONDITIONAL_TAGS,
+    DEFAULT_YC_BLOG_EXCLUDE_TAGS,
+    DEFAULT_YC_BLOG_INCLUDE_TAGS,
+    YCBlogScraper,
+    build_clean_taxonomy_from_posts,
+    build_taxonomy_from_posts,
+    clean_metadata_record,
+)
 
 ARTIFACTS_DIR = Path("artifacts")
 METADATA_DIR = ARTIFACTS_DIR / "metadata"
@@ -26,6 +40,50 @@ def main():
     scrape_parser.add_argument("--algolia-app-id", help="Algolia app ID")
     scrape_parser.add_argument("--algolia-api-key", help="Algolia API key")
     scrape_parser.add_argument("--algolia-index", default="library_posts")
+
+    # Scrape blog command (PoC + filtered metadata)
+    scrape_blog_parser = subparsers.add_parser(
+        "scrape-blog", help="Discover YC Blog posts via Algolia"
+    )
+    scrape_blog_parser.add_argument("--output-dir", default=DEFAULT_BLOG_METADATA_DIR)
+    scrape_blog_parser.add_argument("--taxonomy-output", default=DEFAULT_BLOG_TAXONOMY_FILE)
+    scrape_blog_parser.add_argument("--algolia-app-id", help="Algolia app ID")
+    scrape_blog_parser.add_argument("--algolia-api-key", help="Algolia API key")
+    scrape_blog_parser.add_argument("--algolia-index", help="Algolia index name")
+    scrape_blog_parser.add_argument(
+        "--include-tags",
+        nargs="*",
+        default=DEFAULT_YC_BLOG_INCLUDE_TAGS,
+        help="Allowlist tags (defaults to Essay/Advice/Founder Stories/Startup School)",
+    )
+    scrape_blog_parser.add_argument(
+        "--exclude-tags",
+        nargs="*",
+        default=DEFAULT_YC_BLOG_EXCLUDE_TAGS,
+        help="Denylist tags (defaults to YC News/YC Events)",
+    )
+    scrape_blog_parser.add_argument(
+        "--conditional-tags",
+        nargs="*",
+        default=DEFAULT_YC_BLOG_CONDITIONAL_TAGS,
+        help="Conditional tags that require content-level checks",
+    )
+    scrape_blog_parser.add_argument(
+        "--conditional-min-words",
+        type=int,
+        default=DEFAULT_YC_BLOG_CONDITIONAL_MIN_WORDS,
+        help="Minimum words for conditional-tag posts",
+    )
+    scrape_blog_parser.add_argument(
+        "--taxonomy-only",
+        action="store_true",
+        help="Only fetch and write taxonomy/category counts; do not persist filtered metadata",
+    )
+    scrape_blog_parser.add_argument(
+        "--autodiscover-config",
+        action="store_true",
+        help="Attempt to auto-detect blog Algolia config from ycombinator.com/blog",
+    )
 
     # Extract command
     extract_parser = subparsers.add_parser("extract", help="Extract content from posts")
@@ -54,10 +112,35 @@ def main():
     pipeline_parser.add_argument("--algolia-api-key", help="Algolia API key")
     pipeline_parser.add_argument(
         "--workflow",
-        choices=["startup_school", "full"],
-        help="Run a specialised workflow: 'startup_school' or 'full' (all sources)",
+        choices=["startup_school", "full", "yc_blog"],
+        help="Run a specialised workflow: 'startup_school', 'yc_blog', or 'full' (all sources)",
     )
     pipeline_parser.add_argument("--algolia-index", default="library_posts")
+    pipeline_parser.add_argument("--algolia-blog-index", default="ycdc_blog_production")
+    pipeline_parser.add_argument(
+        "--blog-include-tags",
+        nargs="*",
+        default=DEFAULT_YC_BLOG_INCLUDE_TAGS,
+        help="YC Blog allowlist tags",
+    )
+    pipeline_parser.add_argument(
+        "--blog-exclude-tags",
+        nargs="*",
+        default=DEFAULT_YC_BLOG_EXCLUDE_TAGS,
+        help="YC Blog denylist tags (takes precedence)",
+    )
+    pipeline_parser.add_argument(
+        "--blog-conditional-tags",
+        nargs="*",
+        default=DEFAULT_YC_BLOG_CONDITIONAL_TAGS,
+        help="YC Blog tags requiring content-level checks",
+    )
+    pipeline_parser.add_argument(
+        "--blog-conditional-min-words",
+        type=int,
+        default=DEFAULT_YC_BLOG_CONDITIONAL_MIN_WORDS,
+        help="Minimum words for conditional YC Blog posts",
+    )
 
     # Init command
     init_parser = subparsers.add_parser("init", help="Interactive first-run setup")
@@ -107,6 +190,54 @@ def main():
         scraper.save_posts(posts, args.output_dir)
         print(f"Saved to {args.output_dir}/")
 
+    elif args.command == "scrape-blog":
+        config = Config()
+        scraper_kwargs = {
+            "app_id": args.algolia_app_id or config.algolia_app_id,
+            "api_key": args.algolia_api_key or config.algolia_blog_api_key,
+            "index_name": args.algolia_index or config.algolia_blog_index,
+        }
+        if args.autodiscover_config:
+            try:
+                discovered = YCBlogScraper.discover_algolia_config()
+                scraper_kwargs = {
+                    "app_id": discovered["app_id"],
+                    "api_key": discovered["api_key"],
+                    "index_name": discovered["index_name"],
+                }
+            except Exception:
+                pass
+
+        scraper = YCBlogScraper(**scraper_kwargs)
+        print(f"Discovering YC Blog posts from Algolia ({scraper.index_name})...")
+        
+        try:
+            posts = scraper.browse_all()
+        except Exception as e:
+            print(f"⚠ Algolia failed ({e}), falling back to RSS feed + scraping...")
+            posts = scraper.browse_all_from_rss()
+        
+        print(f"Found {len(posts)} blog posts")
+
+        taxonomy_payload = build_clean_taxonomy_from_posts(posts)
+        taxonomy_path = Path(args.taxonomy_output)
+        taxonomy_path.parent.mkdir(parents=True, exist_ok=True)
+        taxonomy_path.write_text(json.dumps(taxonomy_payload, indent=2))
+        print(f"Wrote clean taxonomy to {args.taxonomy_output}")
+
+        if not args.taxonomy_only:
+            # Clean metadata before saving
+            clean_posts = [clean_metadata_record(post) for post in posts]
+            saved = scraper.save_posts(
+                clean_posts,
+                args.output_dir,
+                include_tags=args.include_tags,
+                exclude_tags=args.exclude_tags,
+                conditional_tags=args.conditional_tags,
+                conditional_min_words=args.conditional_min_words,
+            )
+            print(f"Saved {saved} filtered blog posts to {args.output_dir}")
+
     elif args.command == "extract":
         from .extractor import ContentExtractor
 
@@ -124,13 +255,16 @@ def main():
     elif args.command == "pipeline":
         from .pipeline import PipelineOrchestrator
 
+        config = Config()
         orchestrator = PipelineOrchestrator(
             metadata_dir=args.metadata_dir,
             content_dir=args.output_dir,
             workers=args.workers,
-            algolia_app_id=args.algolia_app_id,
-            algolia_api_key=args.algolia_api_key,
-            algolia_index=args.algolia_index,
+            algolia_app_id=args.algolia_app_id or config.algolia_app_id,
+            algolia_api_key=args.algolia_api_key or config.algolia_api_key,
+            algolia_index=args.algolia_index or config.algolia_index,
+            algolia_blog_index=args.algolia_blog_index or config.algolia_blog_index,
+            algolia_blog_api_key=config.algolia_blog_api_key,
         )
         # handle specialised workflows
         workflow = getattr(args, "workflow", None)
@@ -138,8 +272,24 @@ def main():
             orchestrator.run_startup_school(
                 replay=args.replay, force=(args.mode == "dev" or args.replay)
             )
+        elif workflow == "yc_blog":
+            orchestrator.run_yc_blog(
+                replay=args.replay,
+                force=(args.mode == "dev" or args.replay),
+                include_tags=args.blog_include_tags,
+                exclude_tags=args.blog_exclude_tags,
+                conditional_tags=args.blog_conditional_tags,
+                conditional_min_words=args.blog_conditional_min_words,
+            )
         elif workflow == "full":
-            orchestrator.run_full(force=args.force, replay=args.replay)
+            orchestrator.run_full(
+                force=args.force,
+                replay=args.replay,
+                blog_include_tags=args.blog_include_tags,
+                blog_exclude_tags=args.blog_exclude_tags,
+                blog_conditional_tags=args.blog_conditional_tags,
+                blog_conditional_min_words=args.blog_conditional_min_words,
+            )
         else:
             orchestrator.run(
                 start_stage=args.start_stage,

@@ -57,6 +57,10 @@ class Config:
         "yJTJDJTVCJTIya2Jfcm9vdF8xNzYlMjIlMkMlMjJrYl9yb290XzkxMiUyMiU1RCU1RA=="
     )
     DEFAULT_ALGOLIA_INDEX = "Library_bookface_production"
+    DEFAULT_ALGOLIA_BLOG_API_KEY = (
+        "MGRmNGJlOWM2M2E2NmI2NzdlZGZmMTU3MDZiMGZiNDFhOWM0M2QwNmExZjIxNDZlMWQwOWQzMWE3MzRkMjYzMmFuYWx5dGljc1RhZ3M9eWNkYyZyZXN0cmljdEluZGljZXM9eWNkY19ibG9nX3Byb2R1Y3Rpb24mdGFnRmlsdGVycz0lNUIlMjJ5Y2RjX3B1YmxpYyUyMiU1RA=="
+    )
+    DEFAULT_ALGOLIA_BLOG_INDEX = "ycdc_blog_production"
 
     # Transcript defaults
     DEFAULT_MIN_CONTENT_LENGTH = 700
@@ -67,6 +71,7 @@ class Config:
         algolia_app_id: Optional[str] = None,
         algolia_api_key: Optional[str] = None,
         algolia_index: Optional[str] = None,
+        algolia_blog_index: Optional[str] = None,
         metadata_dir: Optional[str] = None,
         content_dir: Optional[str] = None,
         min_content_length: Optional[int] = None,
@@ -79,6 +84,7 @@ class Config:
             algolia_app_id: Algolia app ID (overrides env)
             algolia_api_key: Algolia API key (overrides env)
             algolia_index: Algolia index name (overrides env)
+            algolia_blog_index: Algolia blog index name (overrides env)
             metadata_dir: Directory for post metadata (overrides env)
             content_dir: Directory for extracted content (overrides env)
             min_content_length: Minimum chars for valid extraction (overrides env)
@@ -97,6 +103,14 @@ class Config:
         )
         self.algolia_index = (
             algolia_index or os.getenv("ALGOLIA_INDEX") or self.DEFAULT_ALGOLIA_INDEX
+        )
+        self.algolia_blog_index = (
+            algolia_blog_index
+            or os.getenv("ALGOLIA_BLOG_INDEX")
+            or self.DEFAULT_ALGOLIA_BLOG_INDEX
+        )
+        self.algolia_blog_api_key = (
+            os.getenv("ALGOLIA_BLOG_API_KEY") or self.DEFAULT_ALGOLIA_BLOG_API_KEY
         )
 
         # Directory configuration
@@ -131,6 +145,7 @@ class Config:
             ),
             "algolia_api_key": "***" if self.algolia_api_key else None,
             "algolia_index": self.algolia_index,
+            "algolia_blog_index": self.algolia_blog_index,
             "metadata_dir": self.metadata_dir,
             "content_dir": self.content_dir,
             "min_content_length": self.min_content_length,
@@ -147,6 +162,7 @@ class Config:
 ALGOLIA_APP_ID={self.algolia_app_id}
 ALGOLIA_API_KEY={self.algolia_api_key}
 ALGOLIA_INDEX={self.algolia_index}
+ALGOLIA_BLOG_INDEX={self.algolia_blog_index}
 
 # Directory configuration
 METADATA_DIR={self.metadata_dir}
