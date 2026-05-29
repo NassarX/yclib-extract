@@ -19,7 +19,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from .companies import CompaniesByTagScraper
+from .companies import DEFAULT_COMPANY_TAGS, CompaniesByTagScraper
 from .extractor import (
     DEFAULT_CONTENT_DIR,
     DEFAULT_DB_PATH,
@@ -670,10 +670,11 @@ class PipelineOrchestrator:
 
     def run_companies_by_tag(
         self,
-        tags: List[str],
+        tags: Optional[List[str]] = None,
         replay: bool = False,
         force: bool = False,
         output_dir: Optional[str] = None,
+        discover_all_tags: bool = False,
     ) -> Dict[str, Any]:
         """Run companies-by-tag workflow and write metadata plus Markdown artifacts."""
         run_id = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -684,37 +685,113 @@ class PipelineOrchestrator:
 
         try:
             scraper = CompaniesByTagScraper()
-            counts = scraper.get_tag_counts(tags)
-            taxonomy = [scraper.build_tag_record(tag, count=counts.get(tag, 0)) for tag in tags]
+            if discover_all_tags:
+                tags = scraper.discover_tag_slugs()
+            tags = list(tags or [])
+            if not tags:
+                tags = list(DEFAULT_COMPANY_TAGS)
+            # fetch and persist full metadata per tag
+            save_result = scraper.save_metadata(
+                tags,
+                str(metadata_out),
+                force=force,
+                concurrency=self.workers,
+                return_summary=True,
+            )
+            if isinstance(save_result, tuple):
+                total, taxonomy = save_result
+            else:
+                total = save_result
+                taxonomy = []
+
+            if not taxonomy:
+                counts = scraper.get_tag_counts(tags)
+                taxonomy = [scraper.build_tag_record(tag, count=counts.get(tag, 0)) for tag in tags]
+
             # write taxonomy summary
             taxonomy_path = metadata_out / "yc_companies_by_tag_taxonomy.json"
             taxonomy_path.parent.mkdir(parents=True, exist_ok=True)
             taxonomy_path.write_text(json.dumps(taxonomy, indent=2))
-            # fetch and persist full metadata per tag
-            total = scraper.save_metadata(
-                tags, str(metadata_out), force=force, concurrency=self.workers
-            )
 
-            # Convert tag JSON payloads into Markdown artifacts using extractor.save_company
+            # Build a global canonical index to deduplicate companies across tags
             artifacts_base = ARTIFACTS_DIR / "yc_companies_by_tag"
             artifacts_base.mkdir(parents=True, exist_ok=True)
-            saved_markdown = 0
+
+            canonical_index: Dict[str, Dict[str, Any]] = {}
+
             for record in taxonomy:
                 tag = str(record.get("slug") or "")
-                url = str(record.get("url") or "")
-                if not tag or not url:
-                    continue
-                companies = scraper.fetch_url(url)
-                for company in companies:
+                # prefer local saved file if available
+                tag_file_path = Path(record.get("file") or (metadata_out / f"{tag}.json"))
+                companies_list: List[Dict[str, Any]] = []
+                if tag_file_path.exists():
                     try:
-                        path = self.extractor.save_company(
-                            company, tag, output_base=str(artifacts_base), force=force
-                        )
-                        if path:
-                            saved_markdown += 1
-                    except Exception as e:
-                        self._log(f"Failed to save company for tag {tag}: {e}")
-                        continue
+                        companies_list = json.loads(tag_file_path.read_text())
+                    except Exception:
+                        companies_list = []
+                else:
+                    try:
+                        companies_list = scraper.fetch_tag(tag)
+                    except Exception:
+                        companies_list = []
+
+                record_companies: List[str] = []
+                for company in companies_list:
+                    canonical = company.get("api") or company.get("url")
+                    if not canonical:
+                        canonical = f"yc://company/{company.get('slug') or company.get('id')}"
+                    record_companies.append(canonical)
+
+                    if canonical not in canonical_index:
+                        # copy company and track tags set
+                        ccopy = dict(company)
+                        ccopy["tags"] = [tag]
+                        canonical_index[canonical] = ccopy
+                    else:
+                        # merge tag membership
+                        existing = canonical_index[canonical]
+                        existing_tags = set(existing.get("tags", []))
+                        existing_tags.add(tag)
+                        existing["tags"] = list(sorted(existing_tags))
+                        # prefer longer descriptions if missing
+                        if (not existing.get("long_description")) and company.get(
+                            "long_description"
+                        ):
+                            existing["long_description"] = company.get("long_description")
+
+                record["companies"] = record_companies
+
+            # persist updated taxonomy with companies list
+            taxonomy_path.write_text(json.dumps(taxonomy, indent=2))
+
+            # persist canonical companies mapping
+            companies_map_path = metadata_out.parent / "yc_companies_by_tag_companies.json"
+            try:
+                companies_map_path.write_text(json.dumps(canonical_index, indent=2))
+            except Exception:
+                pass
+
+            # Write one canonical markdown per unique company
+            saved_markdown = 0
+            companies_dir = artifacts_base / "companies"
+            companies_dir.mkdir(parents=True, exist_ok=True)
+
+            for canonical, company in canonical_index.items():
+                try:
+                    # ensure tags list is present
+                    aggregated_tags = company.get("tags", [])
+                    path = self.extractor.save_company(
+                        company,
+                        tag=None,
+                        output_base=str(artifacts_base),
+                        force=force,
+                        aggregated_tags=aggregated_tags,
+                    )
+                    if path:
+                        saved_markdown += 1
+                except Exception as e:
+                    self._log(f"Failed to save canonical company {canonical}: {e}")
+                    continue
 
             self.write_unified_audit()
             self.db.end_run(run_id, "done")
