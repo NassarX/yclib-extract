@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import requests
 from bs4 import BeautifulSoup
@@ -452,8 +452,11 @@ class ContentExtractor:
         force: bool = False,
         aggregated_tags: Optional[List[str]] = None,
     ) -> str:
-        """Save a company JSON object. If `tag` is provided, save under artifacts/yc_companies_by_tag/{tag}/.
-        When `tag` is None, save canonical company artifacts under artifacts/yc_companies_by_tag/companies/.
+        """Save a company JSON object.
+
+        If `tag` is provided, save under artifacts/yc_companies_by_tag/{tag}/.
+        When `tag` is None, save canonical company artifacts under
+        artifacts/yc_companies_by_tag/companies/.
         """
         base_dir = Path(output_base) if output_base else Path("artifacts") / "yc_companies_by_tag"
         out_dir = base_dir / tag if tag else base_dir / "companies"

@@ -19,7 +19,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from .companies import CompaniesByTagScraper, DEFAULT_COMPANY_TAGS
+from .companies import DEFAULT_COMPANY_TAGS, CompaniesByTagScraper
 from .extractor import (
     DEFAULT_CONTENT_DIR,
     DEFAULT_DB_PATH,
@@ -754,7 +754,9 @@ class PipelineOrchestrator:
                         existing_tags.add(tag)
                         existing["tags"] = list(sorted(existing_tags))
                         # prefer longer descriptions if missing
-                        if (not existing.get("long_description")) and company.get("long_description"):
+                        if (not existing.get("long_description")) and company.get(
+                            "long_description"
+                        ):
                             existing["long_description"] = company.get("long_description")
 
                 record["companies"] = record_companies

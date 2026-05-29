@@ -163,7 +163,9 @@ class CompaniesByTagScraper:
             companies = []
             try:
                 for comp in items_to_write if isinstance(items_to_write, list) else []:
-                    unifier = comp.get("url") or comp.get("slug") or f"yc://company/{comp.get('id')}"
+                    unifier = (
+                        comp.get("url") or comp.get("slug") or f"yc://company/{comp.get('id')}"
+                    )
                     if unifier and unifier not in companies:
                         companies.append(unifier)
             except Exception:

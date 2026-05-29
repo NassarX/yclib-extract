@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 from . import __version__
-from .companies import CompaniesByTagScraper, DEFAULT_COMPANY_TAGS
+from .companies import DEFAULT_COMPANY_TAGS, CompaniesByTagScraper
 from .config import Config
 from .scraper import (
     DEFAULT_BLOG_METADATA_DIR,
@@ -322,10 +322,7 @@ def main():
         taxonomy_path.parent.mkdir(parents=True, exist_ok=True)
         if not taxonomy:
             counts = scraper.get_tag_counts(tags)
-            taxonomy = [
-                scraper.build_tag_record(tag, count=counts.get(tag, 0))
-                for tag in tags
-            ]
+            taxonomy = [scraper.build_tag_record(tag, count=counts.get(tag, 0)) for tag in tags]
         taxonomy_path.write_text(json.dumps(taxonomy, indent=2))
         print(f"Wrote taxonomy to {args.taxonomy_output}")
         print(f"Saved {saved_total} company entries to {args.output_dir}")

@@ -1,7 +1,7 @@
 import json
 
 from yclib_extract import pipeline as pipeline_module
-from yclib_extract.companies import CompaniesByTagScraper, DEFAULT_COMPANY_TAGS
+from yclib_extract.companies import DEFAULT_COMPANY_TAGS, CompaniesByTagScraper
 from yclib_extract.pipeline import PipelineOrchestrator
 
 
@@ -201,7 +201,15 @@ def test_companies_by_tag_pipeline_uses_default_seed_tags(tmp_path, monkeypatch)
     captured = {}
 
     class StubScraper:
-        def save_metadata(self, tags, output_dir, force=False, concurrency=4, write_manifests=True, return_summary=False):
+        def save_metadata(
+            self,
+            tags,
+            output_dir,
+            force=False,
+            concurrency=4,
+            write_manifests=True,
+            return_summary=False,
+        ):
             captured["tags"] = list(tags)
             if return_summary:
                 return 0, []
