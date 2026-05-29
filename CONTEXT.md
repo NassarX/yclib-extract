@@ -13,7 +13,7 @@ A JSON snapshot (for example `artifacts/metadata/yc_blog_taxonomy.json`) that re
 _Avoid_: final metadata manifest, extraction state
 
 **Companies-by-Tag Snapshot**:
-A JSON snapshot (for example `artifacts/metadata/yc_companies_by_tag_taxonomy.json`) that records tag slug, display name, source URL, and company count for YC company tag exports.
+An inventory JSON snapshot (for example `artifacts/metadata/yc_companies_by_tag_taxonomy.json`) that records tag slug, display name, source URL, company count, and canonical company refs for YC company tag exports.
 _Avoid_: company manifest, markdown output
 
 **Unified Audit**:
@@ -61,7 +61,7 @@ When both allowlist and denylist tags apply to the same resource, denylist wins 
 _Avoid_: include-wins conflict handling
 
 **Companies-by-Tag Export**:
-The tag-scoped YC company workflow that fetches per-tag JSON, writes per-tag metadata under `artifacts/metadata/yc_companies_by_tag/`, and exports Markdown artifacts under `artifacts/yc_companies_by_tag/{tag}/`.
+The YC company workflow that can discover all tag slugs or process a chosen subset, writes per-tag metadata under `artifacts/metadata/yc_companies_by_tag/`, and exports one canonical Markdown artifact per company under `artifacts/yc_companies_by_tag/companies/`.
 _Avoid_: generic YC Library extraction
 
 **Dev Replay**:

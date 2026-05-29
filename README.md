@@ -56,8 +56,14 @@ yclib-extract build startup-school --ensure-local --cleanup-orphans
 # YC Blog PoC: discover taxonomy + save filtered metadata
 yclib-extract scrape-blog --taxonomy-output artifacts/metadata/yc_blog_taxonomy.json
 
-# YC Companies by Tag: require one or more tag slugs
+# YC Companies by Tag: run specific tag slugs
 yclib-extract scrape-companies --tags ai weather --taxonomy-output artifacts/metadata/yc_companies_by_tag_taxonomy.json
+
+# YC Companies by Tag: use the built-in default seed tags
+yclib-extract scrape-companies --taxonomy-output artifacts/metadata/yc_companies_by_tag_taxonomy.json
+
+# Discover every YC tag first, then inspect the taxonomy
+yclib-extract scrape-companies --discover-all-tags --taxonomy-only --taxonomy-output artifacts/metadata/yc_companies_by_tag_taxonomy.json
 ```
 
 *Note: The pipeline uses an append-only mode by default. Append `--force` to any command to overwrite existing files and force a fresh extraction.*
@@ -71,6 +77,7 @@ All extracted content is saved to the `artifacts/` directory:
 - `artifacts/yc_library/` — YC Library resources.
 - `artifacts/yc_blog/` — YC Blog resources.
 - `artifacts/yc_companies_by_tag/` — YC Companies-by-tag resources, grouped by tag slug.
+- `artifacts/metadata/yc_companies_by_tag_taxonomy.json` — tag taxonomy and counts for discovered YC tags.
 - `artifacts/yc_startup_school/` — Standalone Startup School curriculum.
 - `artifacts/resources_audit.csv` — A unified audit detailing the success and quality metrics of every extracted file.
 

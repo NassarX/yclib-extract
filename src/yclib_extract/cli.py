@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 from . import __version__
-from .companies import CompaniesByTagScraper
+from .companies import DEFAULT_COMPANY_TAGS, CompaniesByTagScraper
 from .config import Config
 from .scraper import (
     DEFAULT_BLOG_METADATA_DIR,
@@ -98,8 +98,12 @@ def main():
     scrape_companies_parser.add_argument(
         "--tags",
         nargs="+",
-        required=True,
-        help="List of tag slugs to fetch (required)",
+        help="List of tag slugs to fetch",
+    )
+    scrape_companies_parser.add_argument(
+        "--discover-all-tags",
+        action="store_true",
+        help="Discover every YC tag slug from yc-oss/api/tags before fetching counts",
     )
     scrape_companies_parser.add_argument(
         "--taxonomy-only",
@@ -160,6 +164,11 @@ def main():
     pipeline_parser.add_argument(
         "--tags-file",
         help="Path to a file containing tag slugs (one per line) for companies_by_tag workflow",
+    )
+    pipeline_parser.add_argument(
+        "--discover-all-tags",
+        action="store_true",
+        help="Discover every YC tag slug from yc-oss/api before running companies_by_tag",
     )
     pipeline_parser.add_argument("--algolia-index", default="library_posts")
     pipeline_parser.add_argument("--algolia-blog-index", default="ycdc_blog_production")
@@ -288,22 +297,35 @@ def main():
         config = Config()
         scraper = CompaniesByTagScraper()
         tags = args.tags or []
+        if args.discover_all_tags:
+            print("Discovering all YC tag slugs from yc-oss/api...")
+            tags = scraper.discover_tag_slugs()
+            print(f"Discovered {len(tags)} tags")
         if not tags:
-            print("Error: --tags is required (provide one or more tag slugs)")
-            return 1
-        print(f"Fetching counts for {len(tags)} tags...")
-        taxonomy = scraper.get_tag_counts(tags)
+            tags = list(DEFAULT_COMPANY_TAGS)
+            print(f"Using default seed tags: {', '.join(tags)}")
+        print(f"Fetching metadata for {len(tags)} tags...")
+        save_result = scraper.save_metadata(
+            tags,
+            args.output_dir,
+            force=args.force,
+            concurrency=args.concurrency,
+            write_manifests=not args.taxonomy_only,
+            return_summary=True,
+        )
+        if isinstance(save_result, tuple):
+            saved_total, taxonomy = save_result
+        else:
+            saved_total = save_result
+            taxonomy = []
         taxonomy_path = Path(args.taxonomy_output)
         taxonomy_path.parent.mkdir(parents=True, exist_ok=True)
+        if not taxonomy:
+            counts = scraper.get_tag_counts(tags)
+            taxonomy = [scraper.build_tag_record(tag, count=counts.get(tag, 0)) for tag in tags]
         taxonomy_path.write_text(json.dumps(taxonomy, indent=2))
         print(f"Wrote taxonomy to {args.taxonomy_output}")
-
-        if not args.taxonomy_only:
-            print(f"Fetching and saving metadata for {len(tags)} tags into {args.output_dir}...")
-            saved_total = scraper.save_metadata(
-                tags, args.output_dir, force=args.force, concurrency=args.concurrency
-            )
-            print(f"Saved {saved_total} company entries to {args.output_dir}")
+        print(f"Saved {saved_total} company entries to {args.output_dir}")
 
     elif args.command == "extract":
         from .extractor import ContentExtractor
@@ -360,6 +382,8 @@ def main():
         elif workflow == "companies_by_tag":
             # Gather tags from CLI args or file
             tags_list = list(args.tags) if getattr(args, "tags", None) else []
+            discover_all_tags = bool(getattr(args, "discover_all_tags", False))
+            scraper = CompaniesByTagScraper()
             if args.tags_file:
                 try:
                     p = Path(args.tags_file)
@@ -373,9 +397,13 @@ def main():
                     return 1
             # Deduplicate and validate
             tags_list = [t for i, t in enumerate(tags_list) if t and tags_list.index(t) == i]
+            if discover_all_tags:
+                print("Discovering all YC tag slugs from yc-oss/api...")
+                tags_list = scraper.discover_tag_slugs()
+                print(f"Discovered {len(tags_list)} tags")
             if not tags_list:
-                print("Error: --tags or --tags-file is required for companies_by_tag workflow")
-                return 1
+                tags_list = list(DEFAULT_COMPANY_TAGS)
+                print(f"Using default seed tags: {', '.join(tags_list)}")
 
             print(f"Running companies_by_tag workflow for {len(tags_list)} tags...")
             orchestrator.run_companies_by_tag(
@@ -383,6 +411,7 @@ def main():
                 replay=args.replay,
                 force=(args.mode == "dev" or args.force or args.replay),
                 output_dir=args.metadata_dir,
+                discover_all_tags=False,
             )
         else:
             orchestrator.run(
