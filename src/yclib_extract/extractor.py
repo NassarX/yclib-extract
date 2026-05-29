@@ -444,6 +444,75 @@ class ContentExtractor:
 
         return str(filepath)
 
+    def save_company(
+        self,
+        company: Dict[str, Any],
+        tag: str,
+        output_base: Optional[str] = None,
+        force: bool = False,
+    ) -> str:
+        """Save a company JSON object under artifacts/yc_companies_by_tag/{tag}/slug.md."""
+        base_dir = Path(output_base) if output_base else Path("artifacts") / "yc_companies_by_tag"
+        out_dir = base_dir / tag
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        slug = company.get("slug") or company.get("name") or str(company.get("id", "company"))
+        filename = f"{_slugify(slug)}.md"
+        filepath = out_dir / filename
+        if filepath.exists() and not force:
+            return str(filepath)
+
+        frontmatter = {
+            "title": company.get("name"),
+            "slug": company.get("slug"),
+            "url": company.get("url") or company.get("website"),
+            "type": "company",
+            "summary": company.get("one_liner") or company.get("long_description"),
+            "tags": company.get("tags", []),
+            "source_url": company.get("api") or company.get("url"),
+            "exported_at": datetime.now().isoformat(),
+        }
+
+        body = company.get("long_description") or company.get("one_liner") or ""
+        extra_fields = [
+            "former_names",
+            "small_logo_thumb_url",
+            "website",
+            "all_locations",
+            "team_size",
+            "industry",
+            "subindustry",
+            "launched_at",
+            "top_company",
+            "isHiring",
+            "nonprofit",
+            "batch",
+            "status",
+            "industries",
+            "regions",
+            "stage",
+            "app_video_public",
+            "demo_day_video_public",
+            "app_answers",
+            "question_answers",
+        ]
+        extra_lines = []
+        for field in extra_fields:
+            value = company.get(field)
+            if value in (None, "", [], {}):
+                continue
+            extra_lines.append(f"- **{field}**: {json.dumps(value)}")
+
+        with open(filepath, "w") as f:
+            f.write(self._format_frontmatter(frontmatter))
+            f.write("\n\n")
+            f.write(body)
+            if extra_lines:
+                f.write("\n\n")
+                f.write("\n".join(extra_lines))
+
+        return str(filepath)
+
     def process_posts(
         self,
         input_dir: str,
