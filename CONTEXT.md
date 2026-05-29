@@ -12,6 +12,10 @@ _Avoid_: audit file, db
 A JSON snapshot (for example `artifacts/metadata/yc_blog_taxonomy.json`) that reports discovered category/tag values and counts. It informs filtering policy but does not itself define extraction intent.
 _Avoid_: final metadata manifest, extraction state
 
+**Companies-by-Tag Snapshot**:
+A JSON snapshot (for example `artifacts/metadata/yc_companies_by_tag_taxonomy.json`) that records tag slug, display name, source URL, and company count for YC company tag exports.
+_Avoid_: company manifest, markdown output
+
 **Unified Audit**:
 A single CSV file (`artifacts/resources_audit.csv`) acting as a historical record of the last pipeline execution across all sources. It reports on extraction success but does not dictate intended state.
 _Avoid_: metadata, database
@@ -55,6 +59,10 @@ _Avoid_: refresh mode, overwrite mode
 **Tag Filter Precedence**:
 When both allowlist and denylist tags apply to the same resource, denylist wins and the resource is excluded.
 _Avoid_: include-wins conflict handling
+
+**Companies-by-Tag Export**:
+The tag-scoped YC company workflow that fetches per-tag JSON, writes per-tag metadata under `artifacts/metadata/yc_companies_by_tag/`, and exports Markdown artifacts under `artifacts/yc_companies_by_tag/{tag}/`.
+_Avoid_: generic YC Library extraction
 
 **Dev Replay**:
 Testing-oriented pipeline behavior (`--mode dev --replay`) that can force reprocessing to validate workflow behavior without changing weekly production policy.
