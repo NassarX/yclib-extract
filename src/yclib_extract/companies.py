@@ -2,13 +2,24 @@ import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.parse import quote
 
 import requests
 
 RAW_TAG_URL = "https://raw.githubusercontent.com/yc-oss/api/main/tags/{tag}.json"
+TAGS_TREE_URL = "https://api.github.com/repos/yc-oss/api/git/trees/main?recursive=1"
+TAGS_CONTENTS_URL = "https://api.github.com/repos/yc-oss/api/contents/tags"
 DEFAULT_TIMEOUT = 15
+DEFAULT_COMPANY_TAGS = [
+    "generative-ai",
+    "aiops",
+    "crypto-web3",
+    "developer-tools",
+    "design-tools",
+    "open-source",
+    "web-development",
+]
 
 
 class CompaniesByTagScraper:
@@ -47,6 +58,42 @@ class CompaniesByTagScraper:
         url = self.base_url.format(tag=tag)
         return self.fetch_url(url)
 
+    def discover_tag_slugs(self) -> List[str]:
+        """Discover all YC tag slugs from the yc-oss/api repository."""
+        slugs: List[str] = []
+        for url in (TAGS_TREE_URL, TAGS_CONTENTS_URL):
+            try:
+                data = self._fetch_json(url)
+            except Exception:
+                continue
+            if isinstance(data, dict):
+                tree = data.get("tree", [])
+                if isinstance(tree, list):
+                    for item in tree:
+                        if not isinstance(item, dict):
+                            continue
+                        path = item.get("path")
+                        if (
+                            isinstance(path, str)
+                            and path.startswith("tags/")
+                            and path.endswith(".json")
+                        ):
+                            slugs.append(Path(path).stem)
+                    if slugs:
+                        break
+            elif isinstance(data, list):
+                for item in data:
+                    if not isinstance(item, dict):
+                        continue
+                    path = item.get("path") or item.get("name")
+                    if isinstance(path, str) and path.endswith(".json"):
+                        slugs.append(Path(path).stem)
+                if slugs:
+                    break
+
+        # GitHub tree API can be truncated; use unique sorted slugs only.
+        return sorted(dict.fromkeys(slugs))
+
     def get_tag_counts(self, tags: List[str]) -> Dict[str, int]:
         """Return a mapping of tag -> count of companies for the provided tags."""
         counts: Dict[str, int] = {}
@@ -69,8 +116,14 @@ class CompaniesByTagScraper:
         }
 
     def save_metadata(
-        self, tags: List[str], output_dir: str, force: bool = False, concurrency: int = 4
-    ) -> int:
+        self,
+        tags: List[str],
+        output_dir: str,
+        force: bool = False,
+        concurrency: int = 4,
+        write_manifests: bool = True,
+        return_summary: bool = False,
+    ) -> Union[int, Tuple[int, List[Dict[str, Any]]]]:
         """Fetch per-tag company lists and save them as JSON files under output_dir.
 
         Uses a thread pool to fetch tags in parallel. Returns the total number
@@ -88,21 +141,37 @@ class CompaniesByTagScraper:
             except Exception:
                 items = []
             tag_file = out_path / f"{tag}.json"
+            items_to_write = items
             if tag_file.exists() and not force:
                 # read existing to count
                 try:
                     existing = json.loads(tag_file.read_text())
                     count = len(existing) if isinstance(existing, list) else 0
+                    items_to_write = existing
                 except Exception:
                     count = 0
             else:
-                try:
-                    tag_file.write_text(json.dumps(items, indent=2))
-                    count = len(items)
-                except Exception:
-                    count = 0
+                count = len(items)
+                if write_manifests:
+                    try:
+                        tag_file.write_text(json.dumps(items, indent=2))
+                    except Exception:
+                        count = 0
+                        items_to_write = items
+
+            # Build canonical unifier list for the taxonomy
+            companies = []
+            try:
+                for comp in items_to_write if isinstance(items_to_write, list) else []:
+                    unifier = comp.get("url") or comp.get("slug") or f"yc://company/{comp.get('id')}"
+                    if unifier and unifier not in companies:
+                        companies.append(unifier)
+            except Exception:
+                companies = []
+
             record = self.build_tag_record(tag, count=count)
             record["file"] = str(tag_file)
+            record["companies"] = companies
             return record, count
 
         # Run fetches in parallel
@@ -116,10 +185,6 @@ class CompaniesByTagScraper:
                 summary.append(record)
                 total += count
 
-        # write consolidated taxonomy/summary
-        summary_file = out_path.parent / "yc_companies_by_tag_metadata.json"
-        try:
-            summary_file.write_text(json.dumps({"tags": summary}, indent=2))
-        except Exception:
-            pass
+        if return_summary:
+            return total, summary
         return total

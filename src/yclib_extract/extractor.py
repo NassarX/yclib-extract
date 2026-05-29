@@ -447,13 +447,16 @@ class ContentExtractor:
     def save_company(
         self,
         company: Dict[str, Any],
-        tag: str,
+        tag: Optional[str] = None,
         output_base: Optional[str] = None,
         force: bool = False,
+        aggregated_tags: Optional[List[str]] = None,
     ) -> str:
-        """Save a company JSON object under artifacts/yc_companies_by_tag/{tag}/slug.md."""
+        """Save a company JSON object. If `tag` is provided, save under artifacts/yc_companies_by_tag/{tag}/.
+        When `tag` is None, save canonical company artifacts under artifacts/yc_companies_by_tag/companies/.
+        """
         base_dir = Path(output_base) if output_base else Path("artifacts") / "yc_companies_by_tag"
-        out_dir = base_dir / tag
+        out_dir = base_dir / tag if tag else base_dir / "companies"
         out_dir.mkdir(parents=True, exist_ok=True)
 
         slug = company.get("slug") or company.get("name") or str(company.get("id", "company"))
@@ -468,7 +471,8 @@ class ContentExtractor:
             "url": company.get("url") or company.get("website"),
             "type": "company",
             "summary": company.get("one_liner") or company.get("long_description"),
-            "tags": company.get("tags", []),
+            # tags will be replaced by aggregated_tags if provided
+            "tags": aggregated_tags if aggregated_tags is not None else company.get("tags", []),
             "source_url": company.get("api") or company.get("url"),
             "exported_at": datetime.now().isoformat(),
         }

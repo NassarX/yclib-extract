@@ -1,7 +1,7 @@
 import json
 
 from yclib_extract import pipeline as pipeline_module
-from yclib_extract.companies import CompaniesByTagScraper
+from yclib_extract.companies import CompaniesByTagScraper, DEFAULT_COMPANY_TAGS
 from yclib_extract.pipeline import PipelineOrchestrator
 
 
@@ -71,6 +71,25 @@ def test_build_tag_record_humanizes_slug():
     }
 
 
+def test_discover_tag_slugs(monkeypatch):
+    scraper = CompaniesByTagScraper(session=DummySession([]))
+
+    def fake_fetch_json(url, retries=3, backoff=0.4):
+        if "git/trees" not in url:
+            raise AssertionError("unexpected url")
+        return {
+            "tree": [
+                {"path": "tags/ai.json", "type": "blob"},
+                {"path": "tags/weather.json", "type": "blob"},
+                {"path": "docs/readme.md", "type": "blob"},
+            ]
+        }
+
+    monkeypatch.setattr(scraper, "_fetch_json", fake_fetch_json)
+
+    assert scraper.discover_tag_slugs() == ["ai", "weather"]
+
+
 def test_save_metadata_writes_taxonomy_records(tmp_path):
     scraper = CompaniesByTagScraper(session=DummySession(COMPANY_PAYLOAD))
     out_dir = tmp_path / "metadata"
@@ -78,13 +97,18 @@ def test_save_metadata_writes_taxonomy_records(tmp_path):
     total = scraper.save_metadata(["weather"], str(out_dir), force=True, concurrency=2)
 
     assert total == 1
-    summary_path = out_dir.parent / "yc_companies_by_tag_metadata.json"
-    summary = json.loads(summary_path.read_text())
-    assert summary["tags"][0]["name"] == "Weather"
-    assert summary["tags"][0]["slug"] == "weather"
-    assert summary["tags"][0]["url"].endswith("/weather.json")
-    assert summary["tags"][0]["count"] == 1
-    assert summary["tags"][0]["file"].endswith("weather.json")
+    total2, summary = scraper.save_metadata(
+        ["weather"], str(out_dir), force=True, concurrency=2, return_summary=True
+    )
+    assert total2 == 1
+    assert summary[0]["name"] == "Weather"
+    assert summary[0]["slug"] == "weather"
+    assert summary[0]["url"].endswith("/weather.json")
+    assert summary[0]["count"] == 1
+    assert summary[0]["file"].endswith("weather.json")
+    # companies list should be present and reference the canonical api/url unifier
+    assert "companies" in summary[0]
+    assert summary[0]["companies"][0] == COMPANY_PAYLOAD[0]["url"]
 
 
 def test_companies_by_tag_pipeline_smoke(tmp_path, monkeypatch):
@@ -121,7 +145,8 @@ def test_companies_by_tag_pipeline_smoke(tmp_path, monkeypatch):
     assert taxonomy[0]["url"].endswith("/weather.json")
     assert taxonomy[0]["count"] == 1
 
-    markdown_path = artifacts_dir / "yc_companies_by_tag" / "weather" / "tap-to-learn.md"
+    # markdown is written once as a canonical artifact under /companies/
+    markdown_path = artifacts_dir / "yc_companies_by_tag" / "companies" / "tap-to-learn.md"
     text = markdown_path.read_text()
     assert text.startswith("---")
     assert 'title: "Tap to Learn"' in text
@@ -133,3 +158,77 @@ def test_companies_by_tag_pipeline_smoke(tmp_path, monkeypatch):
     assert '- **batch**: "Winter 2012"' in text
     assert '- **website**: "http://taptolearn.com"' in text
     assert text.rstrip().endswith("- **question_answers**: false")
+
+
+def test_companies_by_tag_pipeline_discovers_all_tags(tmp_path, monkeypatch):
+    metadata_dir = tmp_path / "metadata"
+    content_dir = tmp_path / "content"
+    db_path = tmp_path / "extraction.db"
+    artifacts_dir = tmp_path / "artifacts"
+
+    monkeypatch.setenv("YC_BLOG_DIR", str(tmp_path / "yc_blog"))
+    monkeypatch.setenv("PG_ESSAYS_DIR", str(tmp_path / "pg_essays"))
+    monkeypatch.setenv("SA_ESSAYS_DIR", str(tmp_path / "sa_essays"))
+    monkeypatch.setattr(pipeline_module, "ARTIFACTS_DIR", artifacts_dir)
+
+    scraper = CompaniesByTagScraper(session=DummySession(COMPANY_PAYLOAD))
+    monkeypatch.setattr(scraper, "discover_tag_slugs", lambda: ["weather"])
+    monkeypatch.setattr(pipeline_module, "CompaniesByTagScraper", lambda: scraper)
+
+    orchestrator = PipelineOrchestrator(
+        metadata_dir=str(metadata_dir),
+        content_dir=str(content_dir),
+        db_path=str(db_path),
+    )
+
+    result = orchestrator.run_companies_by_tag(
+        None, force=True, output_dir=str(metadata_dir), discover_all_tags=True
+    )
+
+    assert result["discovered_tags"] == 1
+    taxonomy = json.loads((metadata_dir / "yc_companies_by_tag_taxonomy.json").read_text())
+    assert taxonomy[0]["slug"] == "weather"
+
+
+def test_companies_by_tag_pipeline_uses_default_seed_tags(tmp_path, monkeypatch):
+    metadata_dir = tmp_path / "metadata"
+    content_dir = tmp_path / "content"
+    db_path = tmp_path / "extraction.db"
+    artifacts_dir = tmp_path / "artifacts"
+
+    monkeypatch.setattr(pipeline_module, "ARTIFACTS_DIR", artifacts_dir)
+
+    captured = {}
+
+    class StubScraper:
+        def save_metadata(self, tags, output_dir, force=False, concurrency=4, write_manifests=True, return_summary=False):
+            captured["tags"] = list(tags)
+            if return_summary:
+                return 0, []
+            return 0
+
+        def get_tag_counts(self, tags):
+            return {tag: 0 for tag in tags}
+
+        def build_tag_record(self, tag, count=None):
+            return {
+                "name": tag.replace("-", " ").title(),
+                "slug": tag,
+                "url": f"https://example.com/{tag}.json",
+                "count": count,
+            }
+
+        def fetch_tag(self, tag):
+            return []
+
+    monkeypatch.setattr(pipeline_module, "CompaniesByTagScraper", lambda: StubScraper())
+
+    orchestrator = PipelineOrchestrator(
+        metadata_dir=str(metadata_dir),
+        content_dir=str(content_dir),
+        db_path=str(db_path),
+    )
+
+    orchestrator.run_companies_by_tag(None, force=True, output_dir=str(metadata_dir))
+
+    assert captured["tags"] == DEFAULT_COMPANY_TAGS
