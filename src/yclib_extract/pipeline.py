@@ -46,6 +46,7 @@ from .scraper import (
     is_ignored,
     load_ignore_sources,
 )
+from .companies import CompaniesByTagScraper
 
 ARTIFACTS_DIR = Path("artifacts").resolve()
 METADATA_DIR = ARTIFACTS_DIR / "metadata"
@@ -665,6 +666,53 @@ class PipelineOrchestrator:
         except Exception:
             self.db.end_run(run_id, "error")
             self._log("yc_blog run failed")
+            raise
+
+    def run_companies_by_tag(self, tags: List[str], replay: bool = False, force: bool = False, output_dir: Optional[str] = None) -> Dict[str, Any]:
+        """Run companies-by-tag workflow: fetch per-tag company lists, save manifests, and write Markdown artifacts."""
+        run_id = datetime.now().strftime("%Y%m%d%H%M%S")
+        mode = "dev" if force else "weekly"
+        metadata_out = Path(output_dir) if output_dir else (METADATA_DIR / "yc_companies_by_tag")
+        self.db.begin_run(run_id, "discover", mode, replay, str(metadata_out), str(metadata_out))
+        self._log(f"companies_by_tag run {run_id} started ({mode}{', force' if force else ''})")
+
+        try:
+            scraper = CompaniesByTagScraper()
+            counts = scraper.get_tag_counts(tags)
+            taxonomy = [scraper.build_tag_record(tag, count=counts.get(tag, 0)) for tag in tags]
+            # write taxonomy summary
+            taxonomy_path = metadata_out / "yc_companies_by_tag_taxonomy.json"
+            taxonomy_path.parent.mkdir(parents=True, exist_ok=True)
+            taxonomy_path.write_text(json.dumps(taxonomy, indent=2))
+            # fetch and persist full metadata per tag
+            total = scraper.save_metadata(tags, str(metadata_out), force=force, concurrency=self.workers)
+
+            # Convert tag JSON payloads into Markdown artifacts using extractor.save_company
+            artifacts_base = ARTIFACTS_DIR / "yc_companies_by_tag"
+            artifacts_base.mkdir(parents=True, exist_ok=True)
+            saved_markdown = 0
+            for record in taxonomy:
+                tag = str(record.get("slug") or "")
+                url = str(record.get("url") or "")
+                if not tag or not url:
+                    continue
+                companies = scraper.fetch_url(url)
+                for company in companies:
+                    try:
+                        path = self.extractor.save_company(company, tag, output_base=str(artifacts_base), force=force)
+                        if path:
+                            saved_markdown += 1
+                    except Exception as e:
+                        self._log(f"Failed to save company for tag {tag}: {e}")
+                        continue
+
+            self.write_unified_audit()
+            self.db.end_run(run_id, "done")
+            self._log("companies_by_tag run complete")
+            return {"discovered_tags": len(tags), "companies_saved": total, "markdown_saved": saved_markdown}
+        except Exception:
+            self.db.end_run(run_id, "error")
+            self._log("companies_by_tag run failed")
             raise
 
     def _run_curriculum_build(self, inject_only: bool) -> None:

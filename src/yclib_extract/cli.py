@@ -16,11 +16,13 @@ from .scraper import (
     build_clean_taxonomy_from_posts,
     clean_metadata_record,
 )
+from .companies import CompaniesByTagScraper
 
 ARTIFACTS_DIR = Path("artifacts")
 METADATA_DIR = ARTIFACTS_DIR / "metadata"
 DEFAULT_METADATA_DIR = str(METADATA_DIR / "yc_library_metadata.json")
 DEFAULT_CONTENT_DIR = str(ARTIFACTS_DIR / "yc_library")
+DEFAULT_COMPANIES_METADATA_DIR = str(METADATA_DIR / "yc_companies_by_tag")
 
 
 def main():
@@ -84,6 +86,38 @@ def main():
         help="Attempt to auto-detect blog Algolia config from ycombinator.com/blog",
     )
 
+    # Scrape companies by tag (yc-oss/api tags/*.json)
+    scrape_companies_parser = subparsers.add_parser(
+        "scrape-companies", help="Discover YC companies grouped by tag from yc-oss/api tags/*.json"
+    )
+    scrape_companies_parser.add_argument("--output-dir", default=DEFAULT_COMPANIES_METADATA_DIR)
+    scrape_companies_parser.add_argument(
+        "--taxonomy-output",
+        default=str(METADATA_DIR / "yc_companies_by_tag_taxonomy.json"),
+    )
+    scrape_companies_parser.add_argument(
+        "--tags",
+        nargs="+",
+        required=True,
+        help="List of tag slugs to fetch (required)",
+    )
+    scrape_companies_parser.add_argument(
+        "--taxonomy-only",
+        action="store_true",
+        help="Only fetch and write tag counts; do not persist full metadata",
+    )
+    scrape_companies_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force rewrite of existing manifests",
+    )
+    scrape_companies_parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=4,
+        help="Per-tag concurrency for fetching companies",
+    )
+
     # Extract command
     extract_parser = subparsers.add_parser("extract", help="Extract content from posts")
     extract_parser.add_argument("--input-dir", default=DEFAULT_METADATA_DIR)
@@ -111,8 +145,18 @@ def main():
     pipeline_parser.add_argument("--algolia-api-key", help="Algolia API key")
     pipeline_parser.add_argument(
         "--workflow",
-        choices=["startup_school", "full", "yc_blog"],
-        help="Run a specialised workflow: 'startup_school', 'yc_blog', or 'full' (all sources)",
+        choices=["startup_school", "full", "yc_blog", "companies_by_tag"],
+        help="Run a specialised workflow: 'startup_school', 'yc_blog', 'companies_by_tag', or 'full' (all sources)",
+    )
+    # When running companies_by_tag workflow, accept tags either inline or via a file
+    pipeline_parser.add_argument(
+        "--tags",
+        nargs="*",
+        help="List of tag slugs to process for companies_by_tag workflow (space separated)",
+    )
+    pipeline_parser.add_argument(
+        "--tags-file",
+        help="Path to a file containing tag slugs (one per line) for companies_by_tag workflow",
     )
     pipeline_parser.add_argument("--algolia-index", default="library_posts")
     pipeline_parser.add_argument("--algolia-blog-index", default="ycdc_blog_production")
@@ -237,6 +281,25 @@ def main():
             )
             print(f"Saved {saved} filtered blog posts to {args.output_dir}")
 
+    elif args.command == "scrape-companies":
+        config = Config()
+        scraper = CompaniesByTagScraper()
+        tags = args.tags or []
+        if not tags:
+            print("Error: --tags is required (provide one or more tag slugs)")
+            return 1
+        print(f"Fetching counts for {len(tags)} tags...")
+        taxonomy = scraper.get_tag_counts(tags)
+        taxonomy_path = Path(args.taxonomy_output)
+        taxonomy_path.parent.mkdir(parents=True, exist_ok=True)
+        taxonomy_path.write_text(json.dumps(taxonomy, indent=2))
+        print(f"Wrote taxonomy to {args.taxonomy_output}")
+
+        if not args.taxonomy_only:
+            print(f"Fetching and saving metadata for {len(tags)} tags into {args.output_dir}...")
+            saved_total = scraper.save_metadata(tags, args.output_dir, force=args.force, concurrency=args.concurrency)
+            print(f"Saved {saved_total} company entries to {args.output_dir}")
+
     elif args.command == "extract":
         from .extractor import ContentExtractor
 
@@ -288,6 +351,31 @@ def main():
                 blog_exclude_tags=args.blog_exclude_tags,
                 blog_conditional_tags=args.blog_conditional_tags,
                 blog_conditional_min_words=args.blog_conditional_min_words,
+            )
+        elif workflow == "companies_by_tag":
+            # Gather tags from CLI args or file
+            tags_list = list(args.tags) if getattr(args, "tags", None) else []
+            if args.tags_file:
+                try:
+                    p = Path(args.tags_file)
+                    if p.exists():
+                        file_tags = [line.strip() for line in p.read_text().splitlines() if line.strip()]
+                        tags_list.extend(file_tags)
+                except Exception as e:
+                    print(f"Failed to read tags file {args.tags_file}: {e}")
+                    return 1
+            # Deduplicate and validate
+            tags_list = [t for i, t in enumerate(tags_list) if t and tags_list.index(t) == i]
+            if not tags_list:
+                print("Error: --tags or --tags-file is required for companies_by_tag workflow")
+                return 1
+
+            print(f"Running companies_by_tag workflow for {len(tags_list)} tags...")
+            orchestrator.run_companies_by_tag(
+                tags_list,
+                replay=args.replay,
+                force=(args.mode == "dev" or args.force or args.replay),
+                output_dir=args.metadata_dir,
             )
         else:
             orchestrator.run(
