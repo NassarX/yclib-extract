@@ -1,7 +1,7 @@
 import json
 
-from yclib_extract.companies import CompaniesByTagScraper
 from yclib_extract import pipeline as pipeline_module
+from yclib_extract.companies import CompaniesByTagScraper
 from yclib_extract.pipeline import PipelineOrchestrator
 
 
@@ -107,7 +107,9 @@ def test_companies_by_tag_pipeline_smoke(tmp_path, monkeypatch):
         db_path=str(db_path),
     )
 
-    result = orchestrator.run_companies_by_tag(["weather"], force=True, output_dir=str(metadata_dir))
+    result = orchestrator.run_companies_by_tag(
+        ["weather"], force=True, output_dir=str(metadata_dir)
+    )
 
     assert result["discovered_tags"] == 1
     assert result["companies_saved"] == 1
@@ -124,8 +126,10 @@ def test_companies_by_tag_pipeline_smoke(tmp_path, monkeypatch):
     assert text.startswith("---")
     assert 'title: "Tap to Learn"' in text
     assert 'summary: "Games For Education"' in text
-    assert 'source_url: "https://yc-oss.github.io/api/batches/winter-2012/tap-to-learn.json"' in text
+    assert (
+        'source_url: "https://yc-oss.github.io/api/batches/winter-2012/tap-to-learn.json"' in text
+    )
     assert "When we began our first experiments with using Mobile devices" in text
-    assert "- **batch**: \"Winter 2012\"" in text
-    assert "- **website**: \"http://taptolearn.com\"" in text
+    assert '- **batch**: "Winter 2012"' in text
+    assert '- **website**: "http://taptolearn.com"' in text
     assert text.rstrip().endswith("- **question_answers**: false")

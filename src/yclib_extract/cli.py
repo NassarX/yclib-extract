@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from . import __version__
+from .companies import CompaniesByTagScraper
 from .config import Config
 from .scraper import (
     DEFAULT_BLOG_METADATA_DIR,
@@ -16,7 +17,6 @@ from .scraper import (
     build_clean_taxonomy_from_posts,
     clean_metadata_record,
 )
-from .companies import CompaniesByTagScraper
 
 ARTIFACTS_DIR = Path("artifacts")
 METADATA_DIR = ARTIFACTS_DIR / "metadata"
@@ -146,13 +146,16 @@ def main():
     pipeline_parser.add_argument(
         "--workflow",
         choices=["startup_school", "full", "yc_blog", "companies_by_tag"],
-        help="Run a specialised workflow: 'startup_school', 'yc_blog', 'companies_by_tag', or 'full' (all sources)",
+        help=(
+            "Run a specialised workflow: 'startup_school', 'yc_blog', "
+            "'companies_by_tag', or 'full' (all sources)"
+        ),
     )
     # When running companies_by_tag workflow, accept tags either inline or via a file
     pipeline_parser.add_argument(
         "--tags",
         nargs="*",
-        help="List of tag slugs to process for companies_by_tag workflow (space separated)",
+        help=("List of tag slugs to process for companies_by_tag workflow " "(space separated)"),
     )
     pipeline_parser.add_argument(
         "--tags-file",
@@ -297,7 +300,9 @@ def main():
 
         if not args.taxonomy_only:
             print(f"Fetching and saving metadata for {len(tags)} tags into {args.output_dir}...")
-            saved_total = scraper.save_metadata(tags, args.output_dir, force=args.force, concurrency=args.concurrency)
+            saved_total = scraper.save_metadata(
+                tags, args.output_dir, force=args.force, concurrency=args.concurrency
+            )
             print(f"Saved {saved_total} company entries to {args.output_dir}")
 
     elif args.command == "extract":
@@ -359,7 +364,9 @@ def main():
                 try:
                     p = Path(args.tags_file)
                     if p.exists():
-                        file_tags = [line.strip() for line in p.read_text().splitlines() if line.strip()]
+                        file_tags = [
+                            line.strip() for line in p.read_text().splitlines() if line.strip()
+                        ]
                         tags_list.extend(file_tags)
                 except Exception as e:
                     print(f"Failed to read tags file {args.tags_file}: {e}")

@@ -2,7 +2,7 @@ import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
 import requests
@@ -26,7 +26,7 @@ class CompaniesByTagScraper:
                 resp = self.session.get(url, timeout=DEFAULT_TIMEOUT)
                 resp.raise_for_status()
                 return resp.json()
-            except Exception as exc:
+            except Exception:
                 if attempt == retries:
                     raise
                 time.sleep(backoff * attempt)
@@ -68,7 +68,9 @@ class CompaniesByTagScraper:
             "count": count,
         }
 
-    def save_metadata(self, tags: List[str], output_dir: str, force: bool = False, concurrency: int = 4) -> int:
+    def save_metadata(
+        self, tags: List[str], output_dir: str, force: bool = False, concurrency: int = 4
+    ) -> int:
         """Fetch per-tag company lists and save them as JSON files under output_dir.
 
         Uses a thread pool to fetch tags in parallel. Returns the total number

@@ -444,8 +444,14 @@ class ContentExtractor:
 
         return str(filepath)
 
-    def save_company(self, company: Dict[str, Any], tag: str, output_base: Optional[str] = None, force: bool = False) -> str:
-        """Save a company JSON object as a Markdown file under artifacts/yc_companies_by_tag/{tag}/slug.md."""
+    def save_company(
+        self,
+        company: Dict[str, Any],
+        tag: str,
+        output_base: Optional[str] = None,
+        force: bool = False,
+    ) -> str:
+        """Save a company JSON object under artifacts/yc_companies_by_tag/{tag}/slug.md."""
         base_dir = Path(output_base) if output_base else Path("artifacts") / "yc_companies_by_tag"
         out_dir = base_dir / tag
         out_dir.mkdir(parents=True, exist_ok=True)
